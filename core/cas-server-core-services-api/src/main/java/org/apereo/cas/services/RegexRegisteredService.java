@@ -1,9 +1,12 @@
 package org.apereo.cas.services;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.util.RegexUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import lombok.EqualsAndHashCode;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.data.annotation.Transient;
 
 import javax.persistence.DiscriminatorValue;
 import javax.persistence.Entity;
@@ -20,18 +23,16 @@ import java.util.regex.Pattern;
  */
 @Entity
 @DiscriminatorValue("regex")
+@EqualsAndHashCode(callSuper = true)
 public class RegexRegisteredService extends AbstractRegisteredService {
 
     private static final long serialVersionUID = -8258660210826975771L;
 
+    @JsonIgnore
+    @Transient
+    @javax.persistence.Transient
     private transient Pattern servicePattern;
-
-    /**
-     * {@inheritDoc}
-     * Resets the pattern because we just changed the id.
-     *
-     * @param id the new service id
-     */
+    
     @Override
     public void setServiceId(final String id) {
         this.serviceId = id;

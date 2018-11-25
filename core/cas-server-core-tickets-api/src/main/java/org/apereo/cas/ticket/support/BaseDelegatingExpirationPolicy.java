@@ -1,14 +1,18 @@
 package org.apereo.cas.ticket.support;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apereo.cas.ticket.ExpirationPolicy;
 import org.apereo.cas.ticket.TicketState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -24,19 +28,20 @@ import java.util.Optional;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@Slf4j
+@Getter
+@Setter
+@NoArgsConstructor(force = true)
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirationPolicy {
-    private static final long serialVersionUID = 5927936344949518688L;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(BaseDelegatingExpirationPolicy.class);
+    private static final long serialVersionUID = 5927936344949518688L;
 
     private final Map<String, ExpirationPolicy> policies = new LinkedHashMap<>();
 
     private final ExpirationPolicy defaultExpirationPolicy;
-
-    public BaseDelegatingExpirationPolicy() {
-        this(null);
-    }
 
     public BaseDelegatingExpirationPolicy(final ExpirationPolicy defaultExpirationPolicy) {
         this.defaultExpirationPolicy = defaultExpirationPolicy;
@@ -45,10 +50,10 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
     /**
      * Add policy.
      *
-     * @param policy    the policy
+     * @param policy the policy
      */
     public void addPolicy(final ExpirationPolicy policy) {
-        LOGGER.debug("Adding expiration policy [{}] with name [{}]", policy, policy.getName());
+        LOGGER.trace("Adding expiration policy [{}] with name [{}]", policy, policy.getName());
         this.policies.put(policy.getName(), policy);
     }
 
@@ -59,7 +64,7 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
      * @param policy the policy
      */
     public void addPolicy(final String name, final ExpirationPolicy policy) {
-        LOGGER.debug("Adding expiration policy [{}] with name [{}]", policy, name);
+        LOGGER.trace("Adding expiration policy [{}] with name [{}]", policy, name);
         this.policies.put(name, policy);
     }
 
@@ -70,21 +75,40 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
      * @param policy the policy
      */
     public void addPolicy(final Enum name, final ExpirationPolicy policy) {
-        LOGGER.debug("Adding expiration policy [{}] with name [{}]", policy, name);
+        LOGGER.trace("Adding expiration policy [{}] with name [{}]", policy, name);
         addPolicy(name.name(), policy);
     }
-    
+
     @Override
     public boolean isExpired(final TicketState ticketState) {
-        final Optional<ExpirationPolicy> match = getExpirationPolicyFor(ticketState);
-        if (!match.isPresent()) {
+        val match = getExpirationPolicyFor(ticketState);
+        if (match.isEmpty()) {
             LOGGER.warn("No expiration policy was found for ticket state [{}]. "
-                    + "Consider configuring a predicate that delegates to an expiration policy.", ticketState);
-            return false;
+                + "Consider configuring a predicate that delegates to an expiration policy.", ticketState);
+            return super.isExpired(ticketState);
         }
-        final ExpirationPolicy policy = match.get();
-        LOGGER.debug("Activating expiration policy [{}] for ticket [{}]", policy, ticketState);
+        val policy = match.get();
+        LOGGER.trace("Activating expiration policy [{}] for ticket [{}]", policy.getName(), ticketState);
         return policy.isExpired(ticketState);
+    }
+
+    /**
+     * Checks the given ticketState and gets the timeToLive for the relevant expiration policy.
+     *
+     * @param ticketState The ticketState to get the delegated expiration policy for
+     * @return The TTL for the relevant expiration policy
+     */
+    @Override
+    public Long getTimeToLive(final TicketState ticketState) {
+        val match = getExpirationPolicyFor(ticketState);
+        if (match.isEmpty()) {
+            LOGGER.warn("No expiration policy was found for ticket state [{}]. "
+                + "Consider configuring a predicate that delegates to an expiration policy.", ticketState);
+            return super.getTimeToLive(ticketState);
+        }
+        val policy = match.get();
+        LOGGER.trace("Getting TTL from policy [{}] for ticket [{}]", policy.getName(), ticketState);
+        return policy.getTimeToLive(ticketState);
     }
 
     @JsonIgnore
@@ -105,14 +129,6 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
         return this.defaultExpirationPolicy.getTimeToIdle();
     }
 
-    public Map<String, ExpirationPolicy> getPolicies() {
-        return policies;
-    }
-
-    public ExpirationPolicy getDefaultExpirationPolicy() {
-        return defaultExpirationPolicy;
-    }
-    
     /**
      * Gets expiration policy by its name.
      *
@@ -120,14 +136,13 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
      * @return the expiration policy for
      */
     protected Optional<ExpirationPolicy> getExpirationPolicyFor(final TicketState ticketState) {
-        final String name = getExpirationPolicyNameFor(ticketState);
-        LOGGER.debug("Received expiration policy name [{}] to activate", name);
+        val name = getExpirationPolicyNameFor(ticketState);
+        LOGGER.trace("Received expiration policy name [{}] to activate", name);
         if (StringUtils.isNotBlank(name) && policies.containsKey(name)) {
-            final ExpirationPolicy policy = policies.get(name);
-            LOGGER.debug("Located expiration policy [{}] by name [{}]", policy, name);
+            val policy = policies.get(name);
+            LOGGER.trace("Located expiration policy [{}] by name [{}]", policy, name);
             return Optional.of(policy);
         }
-        
         LOGGER.warn("No expiration policy could be found by the name [{}] for ticket state [{}]", name, ticketState);
         return Optional.empty();
     }
@@ -139,32 +154,5 @@ public abstract class BaseDelegatingExpirationPolicy extends AbstractCasExpirati
      * @return the expiration policy name for
      */
     protected abstract String getExpirationPolicyNameFor(TicketState ticketState);
-    
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        final BaseDelegatingExpirationPolicy rhs = (BaseDelegatingExpirationPolicy) obj;
-        return new EqualsBuilder()
-                .appendSuper(super.equals(obj))
-                .append(this.policies, rhs.policies)
-                .append(this.defaultExpirationPolicy, rhs.defaultExpirationPolicy)
-                .isEquals();
-    }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder()
-                .appendSuper(super.hashCode())
-                .append(policies)
-                .append(defaultExpirationPolicy)
-                .toHashCode();
-    }
 }

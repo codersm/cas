@@ -3,6 +3,8 @@ package org.apereo.cas.mock;
 import org.apereo.cas.validation.Assertion;
 import org.apereo.cas.validation.CasProtocolValidationSpecification;
 
+import lombok.AllArgsConstructor;
+
 import javax.servlet.http.HttpServletRequest;
 
 /**
@@ -12,13 +14,9 @@ import javax.servlet.http.HttpServletRequest;
  * @author Scott Battaglia
  * @since 3.0.0
  */
+@AllArgsConstructor
 public class MockValidationSpecification implements CasProtocolValidationSpecification {
-
     private final boolean test;
-
-    public MockValidationSpecification(final boolean test) {
-        this.test = test;
-    }
 
     @Override
     public boolean isSatisfiedBy(final Assertion assertion, final HttpServletRequest request) {

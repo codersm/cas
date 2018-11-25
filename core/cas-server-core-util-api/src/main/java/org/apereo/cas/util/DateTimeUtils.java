@@ -1,5 +1,7 @@
 package org.apereo.cas.util;
 
+import lombok.experimental.UtilityClass;
+import lombok.val;
 import org.joda.time.DateTime;
 import org.joda.time.ReadableInstant;
 
@@ -23,10 +25,8 @@ import java.util.concurrent.TimeUnit;
  * @author Timur Duehr timur.duehr@nccgroup.trust
  * @since 5.0.0
  */
-public final class DateTimeUtils {
-
-    private DateTimeUtils() {
-    }
+@UtilityClass
+public class DateTimeUtils {
 
     /**
      * Parse the given value as a local datetime.
@@ -35,17 +35,20 @@ public final class DateTimeUtils {
      * @return the date/time instance
      */
     public static LocalDateTime localDateTimeOf(final String value) {
-        LocalDateTime result;
+        var result = (LocalDateTime) null;
+
         try {
             result = LocalDateTime.parse(value, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
         } catch (final Exception e) {
             result = null;
         }
 
-        try {
-            result = LocalDateTime.parse(value, DateTimeFormatter.ISO_ZONED_DATE_TIME);
-        } catch (final Exception e) {
-            result = null;
+        if (result == null) {
+            try {
+                result = LocalDateTime.parse(value, DateTimeFormatter.ISO_ZONED_DATE_TIME);
+            } catch (final Exception e) {
+                result = null;
+            }
         }
 
         if (result == null) {
@@ -55,7 +58,7 @@ public final class DateTimeUtils {
                 result = null;
             }
         }
-        
+
         if (result == null) {
             try {
                 result = LocalDateTime.parse(value.toUpperCase(), DateTimeFormatter.ofPattern("MM/dd/yyyy hh:mm a"));
@@ -82,22 +85,21 @@ public final class DateTimeUtils {
 
         if (result == null) {
             try {
-                final LocalDate ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
-                result = LocalDateTime.of(ld, LocalTime.now());
-            } catch (final Exception e) {
-                result = null;
-            }
-        }
-        
-        if (result == null) {
-            try {
-                final LocalDate ld = LocalDate.parse(value);
+                val ld = LocalDate.parse(value, DateTimeFormatter.ofPattern("MM/dd/yyyy"));
                 result = LocalDateTime.of(ld, LocalTime.now());
             } catch (final Exception e) {
                 result = null;
             }
         }
 
+        if (result == null) {
+            try {
+                val ld = LocalDate.parse(value);
+                result = LocalDateTime.of(ld, LocalTime.now());
+            } catch (final Exception e) {
+                result = null;
+            }
+        }
         return result;
     }
 
@@ -108,7 +110,7 @@ public final class DateTimeUtils {
      * @return the local date time
      */
     public static LocalDateTime localDateTimeOf(final long time) {
-        return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneOffset.systemDefault());
+        return LocalDateTime.ofInstant(Instant.ofEpochMilli(time), ZoneId.systemDefault());
     }
 
     /**
@@ -169,7 +171,7 @@ public final class DateTimeUtils {
     /**
      * Utility for creating a ZonedDateTime object from a millisecond timestamp.
      *
-     * @param time   Miliseconds since Epoch
+     * @param time   Milliseconds since Epoch
      * @param zoneId Time zone
      * @return ZonedDateTime representing time
      */
@@ -227,6 +229,15 @@ public final class DateTimeUtils {
         return dateOf(time.toInstant());
     }
 
+    /**
+     * Date of local date.
+     *
+     * @param time the time
+     * @return the date
+     */
+    public static Date dateOf(final LocalDate time) {
+        return Date.from(time.atStartOfDay(ZoneOffset.UTC).toInstant());
+    }
 
     /**
      * Gets Date for Instant.

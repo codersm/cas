@@ -10,8 +10,9 @@ import org.apereo.cas.support.oauth.OAuth20GrantTypes;
 import org.apereo.cas.support.oauth.services.OAuthRegisteredService;
 import org.apereo.cas.support.oauth.util.OAuth20Utils;
 import org.apereo.cas.ticket.registry.TicketRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -21,8 +22,9 @@ import javax.servlet.http.HttpServletRequest;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
 public class AccessTokenRefreshTokenGrantRequestExtractor extends AccessTokenAuthorizationCodeGrantRequestExtractor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AccessTokenRefreshTokenGrantRequestExtractor.class);
+
 
     public AccessTokenRefreshTokenGrantRequestExtractor(final ServicesManager servicesManager, final TicketRegistry ticketRegistry,
                                                         final CentralAuthenticationService centralAuthenticationService,
@@ -35,7 +37,7 @@ public class AccessTokenRefreshTokenGrantRequestExtractor extends AccessTokenAut
     protected String getOAuthParameterName() {
         return OAuth20Constants.REFRESH_TOKEN;
     }
-    
+
     @Override
     protected boolean isAllowedToGenerateRefreshToken() {
         return false;
@@ -43,7 +45,7 @@ public class AccessTokenRefreshTokenGrantRequestExtractor extends AccessTokenAut
 
     @Override
     public boolean supports(final HttpServletRequest context) {
-        final String grantType = context.getParameter(OAuth20Constants.GRANT_TYPE);
+        val grantType = context.getParameter(OAuth20Constants.GRANT_TYPE);
         return OAuth20Utils.isGrantType(grantType, getGrantType());
     }
 
@@ -54,8 +56,8 @@ public class AccessTokenRefreshTokenGrantRequestExtractor extends AccessTokenAut
 
     @Override
     protected OAuthRegisteredService getOAuthRegisteredServiceBy(final HttpServletRequest request) {
-        final String clientId = getRegisteredServiceIdentifierFromRequest(request);
-        final OAuthRegisteredService registeredService = OAuth20Utils.getRegisteredOAuthServiceByClientId(this.servicesManager, clientId);
+        val clientId = getRegisteredServiceIdentifierFromRequest(request);
+        val registeredService = OAuth20Utils.getRegisteredOAuthServiceByClientId(this.servicesManager, clientId);
         LOGGER.debug("Located registered service [{}]", registeredService);
         return registeredService;
     }

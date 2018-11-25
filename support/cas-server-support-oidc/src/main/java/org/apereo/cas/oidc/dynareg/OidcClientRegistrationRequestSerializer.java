@@ -2,6 +2,7 @@ package org.apereo.cas.oidc.dynareg;
 
 import org.apereo.cas.util.serialization.AbstractJacksonBackedStringSerializer;
 
+
 /**
  * This is {@link OidcClientRegistrationRequestSerializer}.
  *

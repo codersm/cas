@@ -1,6 +1,8 @@
 package org.apereo.cas;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import lombok.Getter;
+import lombok.ToString;
+import lombok.val;
 
 import java.io.Serializable;
 import java.util.Date;
@@ -13,12 +15,14 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@ToString
+@Getter
 public class DistributedCacheObject<V extends Serializable> implements Serializable {
-    private static final long serialVersionUID = -6776499291439952013L;
 
-    private Map<String, Object> properties = new LinkedHashMap<>();
+    private static final long serialVersionUID = -6776499291439952013L;
     private final long timestamp;
     private final V value;
+    private final Map<String, Object> properties = new LinkedHashMap<>();
 
     public DistributedCacheObject(final V value) {
         this(new Date().getTime(), value);
@@ -27,27 +31,6 @@ public class DistributedCacheObject<V extends Serializable> implements Serializa
     public DistributedCacheObject(final long timestamp, final V value) {
         this.timestamp = timestamp;
         this.value = value;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
-    }
-
-    public V getValue() {
-        return value;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-            .append("timestamp", timestamp)
-            .append("value", value)
-            .append("properties", properties)
-            .toString();
-    }
-
-    public Map<String, Object> getProperties() {
-        return properties;
     }
 
     /**
@@ -60,11 +43,10 @@ public class DistributedCacheObject<V extends Serializable> implements Serializa
      */
     public <T> T getProperty(final String name, final Class<T> clazz) {
         if (containsProperty(name)) {
-            final Object item = this.properties.get(name);
+            val item = this.properties.get(name);
             if (item == null) {
                 return null;
             }
-
             if (!clazz.isAssignableFrom(item.getClass())) {
                 throw new ClassCastException("Object [" + item + " is of type " + item.getClass() + " when we were expecting " + clazz);
             }

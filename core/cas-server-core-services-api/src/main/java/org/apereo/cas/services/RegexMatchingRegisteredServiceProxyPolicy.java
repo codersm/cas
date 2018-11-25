@@ -1,42 +1,41 @@
 package org.apereo.cas.services;
 
+import org.apereo.cas.util.RegexUtils;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apereo.cas.util.RegexUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
 
 import java.net.URL;
 
 /**
  * A proxy policy that only allows proxying to pgt urls
  * that match the specified regex pattern.
+ *
  * @author Misagh Moayyed
  * @since 4.1.0
  */
+@Slf4j
+@ToString
+@Getter
+@NoArgsConstructor
+@EqualsAndHashCode
 public class RegexMatchingRegisteredServiceProxyPolicy implements RegisteredServiceProxyPolicy {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RegexMatchingRegisteredServiceProxyPolicy.class);
-    
-    private static final long serialVersionUID = -211069319543047324L;
-    
-    private String pattern;
 
-    /**
-     * Instantiates a new Regex matching registered service proxy policy.
-     * Required for serialization.
-     */
-    protected RegexMatchingRegisteredServiceProxyPolicy() {
-        this.pattern = null;
-    }
+    private static final long serialVersionUID = -211069319543047324L;
+
+    private String pattern;
 
     /**
      * Init the policy with the pgt url regex pattern that
      * will determine the urls allowed to receive the pgt.
      * The matching by default is done in a case insensitive manner.
+     *
      * @param pgtUrlPattern the pgt url pattern
      */
     @JsonCreator
@@ -49,39 +48,10 @@ public class RegexMatchingRegisteredServiceProxyPolicy implements RegisteredServ
         }
     }
 
-    public String getPattern() {
-        return this.pattern;
-    }
-
     @JsonIgnore
     @Override
     public boolean isAllowedToProxy() {
         return true;
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder(13, 117).append(this.pattern).toHashCode();
-    }
-
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        final RegexMatchingRegisteredServiceProxyPolicy rhs = (RegexMatchingRegisteredServiceProxyPolicy) obj;
-        return new EqualsBuilder().append(this.pattern, rhs.pattern).isEquals();
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this).append(this.pattern).toString();
     }
 
     @Override

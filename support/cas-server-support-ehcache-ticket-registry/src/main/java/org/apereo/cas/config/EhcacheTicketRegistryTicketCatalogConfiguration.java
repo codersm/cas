@@ -3,8 +3,7 @@ package org.apereo.cas.config;
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.ticket.TicketCatalog;
 import org.apereo.cas.ticket.TicketDefinition;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
@@ -22,8 +21,7 @@ public class EhcacheTicketRegistryTicketCatalogConfiguration extends CasCoreTick
      * Service ticket cache name.
      */
     public static final String SERVICE_TICKETS_CACHE = "serviceTicketsCache";
-    
-    private static final Logger LOGGER = LoggerFactory.getLogger(EhcacheTicketRegistryTicketCatalogConfiguration.class);
+
 
     @Autowired
     private CasConfigurationProperties casProperties;
@@ -39,7 +37,7 @@ public class EhcacheTicketRegistryTicketCatalogConfiguration extends CasCoreTick
     protected void buildAndRegisterProxyTicketDefinition(final TicketCatalog plan, final TicketDefinition metadata) {
         metadata.getProperties().setStorageName("proxyTicketsCache");
         metadata.getProperties().setStorageTimeout(casProperties.getTicket().getPt().getTimeToKillInSeconds());
-        super.buildAndRegisterServiceTicketDefinition(plan, metadata);
+        super.buildAndRegisterProxyTicketDefinition(plan, metadata);
     }
 
     @Override
@@ -53,6 +51,13 @@ public class EhcacheTicketRegistryTicketCatalogConfiguration extends CasCoreTick
     protected void buildAndRegisterProxyGrantingTicketDefinition(final TicketCatalog plan, final TicketDefinition metadata) {
         metadata.getProperties().setStorageName("proxyGrantingTicketsCache");
         metadata.getProperties().setStorageTimeout(casProperties.getTicket().getTgt().getMaxTimeToLiveInSeconds());
-        super.buildAndRegisterTicketGrantingTicketDefinition(plan, metadata);
+        super.buildAndRegisterProxyGrantingTicketDefinition(plan, metadata);
+    }
+
+    @Override
+    protected void buildAndRegisterTransientSessionTicketDefinition(final TicketCatalog plan, final TicketDefinition metadata) {
+        metadata.getProperties().setStorageName("transientSessionTicketsCache");
+        metadata.getProperties().setStorageTimeout(casProperties.getTicket().getTst().getTimeToKillInSeconds());
+        super.buildAndRegisterTransientSessionTicketDefinition(plan, metadata);
     }
 }

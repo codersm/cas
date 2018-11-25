@@ -1,14 +1,16 @@
 package org.apereo.cas.audit.config;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.audit.entity.AuditTrailEntity;
-import org.apereo.cas.audit.spi.DefaultDelegatingAuditTrailManager;
-import org.apereo.cas.audit.spi.DelegatingAuditTrailManager;
+import org.apereo.cas.audit.AuditTrailExecutionPlanConfigurer;
+import org.apereo.cas.audit.spi.entity.AuditTrailEntity;
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.configuration.model.core.audit.AuditJdbcProperties;
 import org.apereo.cas.configuration.model.support.jpa.JpaConfigDataHolder;
 import org.apereo.cas.configuration.support.JpaBeans;
 import org.apereo.cas.util.CollectionUtils;
+
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
+import org.apereo.inspektr.audit.AuditTrailManager;
 import org.apereo.inspektr.audit.support.JdbcAuditTrailManager;
 import org.apereo.inspektr.audit.support.MaxAgeWhereClauseMatchCriteria;
 import org.apereo.inspektr.audit.support.WhereClauseMatchCriteria;
@@ -43,37 +45,43 @@ public class CasSupportJdbcAuditConfiguration {
     private CasConfigurationProperties casProperties;
 
     @Bean
-    public JdbcAuditTrailManager jdbcAuditTrailManager() {
-        final AuditJdbcProperties jdbc = casProperties.getAudit().getJdbc();
-        final JdbcAuditTrailManager t = new JdbcAuditTrailManager(inspektrAuditTransactionTemplate());
+    public AuditTrailManager jdbcAuditTrailManager() {
+        val jdbc = casProperties.getAudit().getJdbc();
+        val t = new JdbcAuditTrailManager(inspektrAuditTransactionTemplate());
         t.setCleanupCriteria(auditCleanupCriteria());
         t.setDataSource(inspektrAuditTrailDataSource());
-        String tableName = AuditTrailEntity.AUDIT_TRAIL_TABLE_NAME;
-        if (StringUtils.isNotBlank(jdbc.getDefaultSchema())) {
-            tableName = jdbc.getDefaultSchema() + '.' + tableName;
-        }
-        if (StringUtils.isNotBlank(jdbc.getDefaultCatalog())) {
-            tableName = jdbc.getDefaultCatalog() + '.' + tableName;
-        }
-        t.setTableName(tableName);
+        t.setAsynchronous(jdbc.isAsynchronous());
+        t.setColumnLength(jdbc.getColumnLength());
+        t.setTableName(getAuditTableNameFrom(jdbc));
         return t;
     }
 
+    private static String getAuditTableNameFrom(final AuditJdbcProperties jdbc) {
+        var tableName = AuditTrailEntity.AUDIT_TRAIL_TABLE_NAME;
+        if (StringUtils.isNotBlank(jdbc.getDefaultSchema())) {
+            tableName = jdbc.getDefaultSchema().concat(".").concat(tableName);
+        }
+        if (StringUtils.isNotBlank(jdbc.getDefaultCatalog())) {
+            tableName = jdbc.getDefaultCatalog().concat(".").concat(tableName);
+        }
+        return tableName;
+    }
+
     @Bean
-    public DelegatingAuditTrailManager auditTrailManager() {
-        return new DefaultDelegatingAuditTrailManager(jdbcAuditTrailManager());
+    public AuditTrailExecutionPlanConfigurer jdbcAuditTrailExecutionPlanConfigurer() {
+        return plan -> plan.registerAuditTrailManager(jdbcAuditTrailManager());
     }
 
     @Lazy
     @Bean
     public LocalContainerEntityManagerFactoryBean inspektrAuditEntityManagerFactory() {
         return JpaBeans.newHibernateEntityManagerFactoryBean(
-                new JpaConfigDataHolder(
-                        JpaBeans.newHibernateJpaVendorAdapter(casProperties.getJdbc()),
-                        "jpaInspektrAuditContext",
-                        CollectionUtils.wrap(AuditTrailEntity.class.getPackage().getName()),
-                        inspektrAuditTrailDataSource()),
-                casProperties.getAudit().getJdbc());
+            new JpaConfigDataHolder(
+                JpaBeans.newHibernateJpaVendorAdapter(casProperties.getJdbc()),
+                "jpaInspektrAuditContext",
+                CollectionUtils.wrap(AuditTrailEntity.class.getPackage().getName()),
+                inspektrAuditTrailDataSource()),
+            casProperties.getAudit().getJdbc());
     }
 
     @Bean
@@ -94,7 +102,7 @@ public class CasSupportJdbcAuditConfiguration {
 
     @Bean
     public TransactionTemplate inspektrAuditTransactionTemplate() {
-        final TransactionTemplate t = new TransactionTemplate(inspektrAuditTransactionManager());
+        val t = new TransactionTemplate(inspektrAuditTransactionManager());
         t.setIsolationLevelName(casProperties.getAudit().getJdbc().getIsolationLevelName());
         t.setPropagationBehaviorName(casProperties.getAudit().getJdbc().getPropagationBehaviorName());
         return t;

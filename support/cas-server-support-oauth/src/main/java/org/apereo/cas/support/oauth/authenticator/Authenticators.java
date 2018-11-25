@@ -11,7 +11,6 @@ public interface Authenticators {
      * Generic oauth clients.
      */
     String CAS_OAUTH_CLIENT = "CasOAuthClient";
-
     /**
      * OAuth authn for basic authn.
      */
@@ -24,4 +23,8 @@ public interface Authenticators {
      * OAuth authn for username/password.
      */
     String CAS_OAUTH_CLIENT_USER_FORM = "userForm";
+    /**
+     * OAuth authn for PKCE.
+     */
+    String CAS_OAUTH_CLIENT_PROOF_KEY_CODE_EXCHANGE_AUTHN = "pkceAuthn";
 }

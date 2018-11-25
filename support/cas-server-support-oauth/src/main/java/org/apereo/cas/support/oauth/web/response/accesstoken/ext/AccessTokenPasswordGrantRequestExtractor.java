@@ -1,32 +1,27 @@
 package org.apereo.cas.support.oauth.web.response.accesstoken.ext;
 
 import org.apereo.cas.CentralAuthenticationService;
-import org.apereo.cas.authentication.Authentication;
-import org.apereo.cas.authentication.AuthenticationResult;
+import org.apereo.cas.audit.AuditableContext;
+import org.apereo.cas.audit.AuditableExecution;
 import org.apereo.cas.authentication.DefaultAuthenticationResult;
-import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.configuration.model.support.oauth.OAuthProperties;
-import org.apereo.cas.services.RegisteredServiceAccessStrategyUtils;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.services.UnauthorizedServiceException;
 import org.apereo.cas.support.oauth.OAuth20Constants;
 import org.apereo.cas.support.oauth.OAuth20GrantTypes;
+import org.apereo.cas.support.oauth.OAuth20ResponseTypes;
 import org.apereo.cas.support.oauth.authenticator.OAuth20CasAuthenticationBuilder;
-import org.apereo.cas.support.oauth.services.OAuthRegisteredService;
 import org.apereo.cas.support.oauth.util.OAuth20Utils;
-import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.registry.TicketRegistry;
 import org.apereo.cas.util.Pac4jUtils;
-import org.pac4j.core.context.J2EContext;
-import org.pac4j.core.profile.ProfileManager;
-import org.pac4j.core.profile.UserProfile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.pac4j.core.profile.CommonProfile;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Optional;
-import java.util.Set;
 
 /**
  * This is {@link AccessTokenPasswordGrantRequestExtractor}.
@@ -34,62 +29,90 @@ import java.util.Set;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
 public class AccessTokenPasswordGrantRequestExtractor extends BaseAccessTokenGrantRequestExtractor {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AccessTokenPasswordGrantRequestExtractor.class);
 
+    private final AuditableExecution registeredServiceAccessStrategyEnforcer;
     private final OAuth20CasAuthenticationBuilder authenticationBuilder;
 
     public AccessTokenPasswordGrantRequestExtractor(final ServicesManager servicesManager,
                                                     final TicketRegistry ticketRegistry,
                                                     final OAuth20CasAuthenticationBuilder authenticationBuilder,
                                                     final CentralAuthenticationService centralAuthenticationService,
-                                                    final OAuthProperties oAuthProperties) {
+                                                    final OAuthProperties oAuthProperties,
+                                                    final AuditableExecution registeredServiceAccessStrategyEnforcer) {
         super(servicesManager, ticketRegistry, centralAuthenticationService, oAuthProperties);
         this.authenticationBuilder = authenticationBuilder;
+        this.registeredServiceAccessStrategyEnforcer = registeredServiceAccessStrategyEnforcer;
     }
 
     @Override
     public AccessTokenRequestDataHolder extract(final HttpServletRequest request, final HttpServletResponse response) {
-        final String clientId = request.getParameter(OAuth20Constants.CLIENT_ID);
-        final Set<String> scopes = OAuth20Utils.parseRequestScopes(request);
+        val clientId = request.getParameter(OAuth20Constants.CLIENT_ID);
+        val scopes = OAuth20Utils.parseRequestScopes(request);
         LOGGER.debug("Locating OAuth registered service by client id [{}]", clientId);
 
-        final OAuthRegisteredService registeredService = OAuth20Utils.getRegisteredOAuthServiceByClientId(this.servicesManager, clientId);
+        val registeredService = OAuth20Utils.getRegisteredOAuthServiceByClientId(this.servicesManager, clientId);
         LOGGER.debug("Located OAuth registered service [{}]", registeredService);
 
-        final J2EContext context = Pac4jUtils.getPac4jJ2EContext(request, response);
-        final ProfileManager manager = Pac4jUtils.getPac4jProfileManager(request, response);
-        final Optional<UserProfile> profile = manager.get(true);
-        if (!profile.isPresent()) {
+        val context = Pac4jUtils.getPac4jJ2EContext(request, response);
+        val manager = Pac4jUtils.getPac4jProfileManager(request, response);
+        val profile = (Optional<CommonProfile>) manager.get(true);
+        if (profile.isEmpty()) {
             throw new UnauthorizedServiceException("OAuth user profile cannot be determined");
         }
-        final UserProfile uProfile = profile.get();
+        val uProfile = profile.get();
         LOGGER.debug("Creating matching service request based on [{}]", registeredService);
-        final boolean requireServiceHeader = oAuthProperties.getGrants().getResourceOwner().isRequireServiceHeader();
+        val requireServiceHeader = oAuthProperties.getGrants().getResourceOwner().isRequireServiceHeader();
         if (requireServiceHeader) {
             LOGGER.debug("Using request headers to identify and build the target service url");
         }
-        final Service service = this.authenticationBuilder.buildService(registeredService, context, requireServiceHeader);
+        val service = this.authenticationBuilder.buildService(registeredService, context, requireServiceHeader);
 
         LOGGER.debug("Authenticating the OAuth request indicated by [{}]", service);
-        final Authentication authentication = this.authenticationBuilder.build(uProfile, registeredService, context, service);
-        RegisteredServiceAccessStrategyUtils.ensurePrincipalAccessIsAllowedForService(service, registeredService, authentication);
+        val authentication = this.authenticationBuilder.build(uProfile, registeredService, context, service);
 
-        final AuthenticationResult result = new DefaultAuthenticationResult(authentication, requireServiceHeader ? service : null);
-        final TicketGrantingTicket ticketGrantingTicket = this.centralAuthenticationService.createTicketGrantingTicket(result);
+        val audit = AuditableContext.builder()
+            .service(service)
+            .authentication(authentication)
+            .registeredService(registeredService)
+            .retrievePrincipalAttributesFromReleasePolicy(Boolean.TRUE)
+            .build();
+        val accessResult = this.registeredServiceAccessStrategyEnforcer.execute(audit);
+        accessResult.throwExceptionIfNeeded();
 
-        return new AccessTokenRequestDataHolder(service, authentication,
-                registeredService, ticketGrantingTicket, getGrantType(), scopes);
+        val result = new DefaultAuthenticationResult(authentication, requireServiceHeader ? service : null);
+        val ticketGrantingTicket = this.centralAuthenticationService.createTicketGrantingTicket(result);
+
+        return AccessTokenRequestDataHolder.builder()
+            .scopes(scopes)
+            .service(service)
+            .authentication(authentication)
+            .registeredService(registeredService)
+            .grantType(getGrantType())
+            .ticketGrantingTicket(ticketGrantingTicket)
+            .generateRefreshToken(registeredService != null && registeredService.isGenerateRefreshToken())
+            .build();
     }
 
     @Override
     public boolean supports(final HttpServletRequest context) {
-        final String grantType = context.getParameter(OAuth20Constants.GRANT_TYPE);
+        val grantType = context.getParameter(OAuth20Constants.GRANT_TYPE);
         return OAuth20Utils.isGrantType(grantType, getGrantType());
+    }
+
+    @Override
+    public OAuth20ResponseTypes getResponseType() {
+        return null;
     }
 
     @Override
     public OAuth20GrantTypes getGrantType() {
         return OAuth20GrantTypes.PASSWORD;
+    }
+
+    @Override
+    public boolean requestMustBeAuthenticated() {
+        return true;
     }
 }

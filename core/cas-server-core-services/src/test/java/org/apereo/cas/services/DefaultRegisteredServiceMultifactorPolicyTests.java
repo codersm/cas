@@ -1,6 +1,7 @@
 package org.apereo.cas.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -21,16 +22,16 @@ public class DefaultRegisteredServiceMultifactorPolicyTests {
 
     @Test
     public void verifySerializeADefaultRegisteredServiceMultifactorPolicyToJson() throws IOException {
-        final DefaultRegisteredServiceMultifactorPolicy policyWritten = new DefaultRegisteredServiceMultifactorPolicy();
+        val policyWritten = new DefaultRegisteredServiceMultifactorPolicy();
         policyWritten.setPrincipalAttributeNameTrigger("trigger");
         policyWritten.setPrincipalAttributeValueToMatch("attribute");
-        final HashSet<String> providers = new HashSet<>();
+        val providers = new HashSet<String>();
         providers.add("providerOne");
         policyWritten.setMultifactorAuthenticationProviders(providers);
 
         MAPPER.writeValue(JSON_FILE, policyWritten);
 
-        final RegisteredServiceMultifactorPolicy policyRead = MAPPER.readValue(JSON_FILE, DefaultRegisteredServiceMultifactorPolicy.class);
+        val policyRead = MAPPER.readValue(JSON_FILE, DefaultRegisteredServiceMultifactorPolicy.class);
 
         assertEquals(policyWritten, policyRead);
     }

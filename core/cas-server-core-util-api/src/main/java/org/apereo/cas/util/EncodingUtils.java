@@ -1,29 +1,29 @@
 package org.apereo.cas.util;
 
+import org.apereo.cas.CipherExecutor;
+
+import lombok.SneakyThrows;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.codec.binary.Base32;
 import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.CipherExecutor;
 import org.jose4j.jwe.JsonWebEncryption;
 import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
 import org.jose4j.jwk.JsonWebKey;
 import org.jose4j.jwk.OctJwkGenerator;
-import org.jose4j.jwk.OctetSequenceJsonWebKey;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.crypto.Cipher;
 import java.io.Serializable;
-import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.security.PrivateKey;
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * This is {@link EncodingUtils} that encapsulates common base64, signing and encryption calls and operations in one spot.
@@ -32,17 +32,21 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-public final class EncodingUtils {
+
+@Slf4j
+@UtilityClass
+public class EncodingUtils {
 
     /**
      * JSON web key parameter that identifies the key..
      */
     public static final String JSON_WEB_KEY = "k";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(EncodingUtils.class);
+    private static final Base32 BASE32_CHUNKED_ENCODER = new Base32(76, new byte[]{10});
+    private static final Base32 BASE32_UNCHUNKED_ENCODER = new Base32(0, new byte[]{10});
 
-    private EncodingUtils() {
-    }
+    private static final Base64 BASE64_CHUNKED_ENCODER = new Base64(76, new byte[]{10});
+    private static final Base64 BASE64_UNCHUNKED_ENCODER = new Base64(0, new byte[]{10});
 
     /**
      * Hex decode string.
@@ -65,7 +69,7 @@ public final class EncodingUtils {
      */
     public static String hexDecode(final char[] data) {
         try {
-            final byte[] result = Hex.decodeHex(data);
+            val result = Hex.decodeHex(data);
             return new String(result, StandardCharsets.UTF_8);
         } catch (final Exception e) {
             return null;
@@ -80,7 +84,7 @@ public final class EncodingUtils {
      */
     public static String hexEncode(final String data) {
         try {
-            final char[] result = Hex.encodeHex(data.getBytes(StandardCharsets.UTF_8));
+            val result = Hex.encodeHex(data.getBytes(StandardCharsets.UTF_8));
             return new String(result);
         } catch (final Exception e) {
             return null;
@@ -95,7 +99,7 @@ public final class EncodingUtils {
      */
     public static String hexEncode(final byte[] data) {
         try {
-            final char[] result = Hex.encodeHex(data);
+            val result = Hex.encodeHex(data);
             return new String(result);
         } catch (final Exception e) {
             return null;
@@ -130,6 +134,23 @@ public final class EncodingUtils {
      */
     public static String encodeBase64(final byte[] data) {
         return Base64.encodeBase64String(data);
+    }
+
+    /**
+     * Base64-encode the given byte[] as a string.
+     *
+     * @param data    the byte array to encode
+     * @param chunked the chunked
+     * @return the encoded string
+     */
+    public static String encodeBase64(final byte[] data, final boolean chunked) {
+        if (data != null && data.length > 0) {
+            if (chunked) {
+                return BASE64_CHUNKED_ENCODER.encodeToString(data).trim();
+            }
+            return BASE64_UNCHUNKED_ENCODER.encodeToString(data).trim();
+        }
+        return StringUtils.EMPTY;
     }
 
     /**
@@ -182,6 +203,19 @@ public final class EncodingUtils {
         return Base64.encodeBase64(data);
     }
 
+    /**
+     * Base32-encode the given byte[] as a string.
+     *
+     * @param data    the byte array to encode
+     * @param chunked the chunked
+     * @return the encoded string
+     */
+    public static String encodeBase32(final byte[] data, final boolean chunked) {
+        if (chunked) {
+            return BASE32_CHUNKED_ENCODER.encodeToString(data).trim();
+        }
+        return BASE32_UNCHUNKED_ENCODER.encodeToString(data).trim();
+    }
 
     /**
      * Url encode a value via UTF-8.
@@ -200,12 +234,9 @@ public final class EncodingUtils {
      * @param encoding the encoding
      * @return the encoded value
      */
+    @SneakyThrows
     public static String urlEncode(final String value, final String encoding) {
-        try {
-            return URLEncoder.encode(value, encoding);
-        } catch (final UnsupportedEncodingException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        return URLEncoder.encode(value, encoding);
     }
 
     /**
@@ -214,12 +245,9 @@ public final class EncodingUtils {
      * @param value the value to decode
      * @return the decoded value
      */
+    @SneakyThrows
     public static String urlDecode(final String value) {
-        try {
-            return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
-        } catch (final UnsupportedEncodingException e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        return URLDecoder.decode(value, StandardCharsets.UTF_8.name());
     }
 
 
@@ -236,27 +264,36 @@ public final class EncodingUtils {
     /**
      * Verify jws signature byte [ ].
      *
+     * @param signingKey the signing key
+     * @param asString   the as string
+     * @return the byte [ ]
+     */
+    @SneakyThrows
+    public static byte[] verifyJwsSignature(final Key signingKey, final String asString) {
+        val jws = new JsonWebSignature();
+        jws.setCompactSerialization(asString);
+        jws.setKey(signingKey);
+
+        val verified = jws.verifySignature();
+        if (verified) {
+            val payload = jws.getEncodedPayload();
+            LOGGER.trace("Successfully decoded value. Result in Base64-encoding is [{}]", payload);
+            return EncodingUtils.decodeBase64(payload);
+        }
+        return null;
+    }
+
+    /**
+     * Verify jws signature byte [ ].
+     *
      * @param value      the value
      * @param signingKey the signing key
      * @return the byte [ ]
      */
+    @SneakyThrows
     public static byte[] verifyJwsSignature(final Key signingKey, final byte[] value) {
-        try {
-            final String asString = new String(value, StandardCharsets.UTF_8);
-            final JsonWebSignature jws = new JsonWebSignature();
-            jws.setCompactSerialization(asString);
-            jws.setKey(signingKey);
-
-            final boolean verified = jws.verifySignature();
-            if (verified) {
-                final String payload = jws.getPayload();
-                LOGGER.trace("Successfully decoded value. Result in Base64-encoding is [{}]", payload);
-                return EncodingUtils.decodeBase64(payload);
-            }
-            return null;
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        val asString = new String(value, StandardCharsets.UTF_8);
+        return verifyJwsSignature(signingKey, asString);
     }
 
 
@@ -267,8 +304,8 @@ public final class EncodingUtils {
      * @return the key
      */
     public static String generateJsonWebKey(final int size) {
-        final OctetSequenceJsonWebKey octetKey = OctJwkGenerator.generateJwk(size);
-        final Map<String, Object> params = octetKey.toParams(JsonWebKey.OutputControlLevel.INCLUDE_SYMMETRIC);
+        val octetKey = OctJwkGenerator.generateJwk(size);
+        val params = octetKey.toParams(JsonWebKey.OutputControlLevel.INCLUDE_SYMMETRIC);
         return params.get(JSON_WEB_KEY).toString();
     }
 
@@ -278,18 +315,15 @@ public final class EncodingUtils {
      * @param secret the secret
      * @return the key
      */
+    @SneakyThrows
     public static Key generateJsonWebKey(final String secret) {
-        try {
-            final Map<String, Object> keys = new HashMap<>(2);
-            keys.put("kty", "oct");
-            keys.put(EncodingUtils.JSON_WEB_KEY, secret);
-            final JsonWebKey jwk = JsonWebKey.Factory.newJwk(keys);
-            return jwk.getKey();
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
-        }
+        val keys = new HashMap<String, Object>(2);
+        keys.put("kty", "oct");
+        keys.put(EncodingUtils.JSON_WEB_KEY, secret);
+        val jwk = JsonWebKey.Factory.newJwk(keys);
+        return jwk.getKey();
     }
-    
+
     /**
      * Sign jws.
      *
@@ -308,7 +342,7 @@ public final class EncodingUtils {
      * @param value the value
      * @return the byte []
      */
-    public static byte[] signJwsRSASha512(final PrivateKey key, final byte[] value) {
+    public static byte[] signJwsRSASha512(final Key key, final byte[] value) {
         return signJws(key, value, AlgorithmIdentifiers.RSA_USING_SHA512);
     }
 
@@ -320,17 +354,15 @@ public final class EncodingUtils {
      * @param algHeaderValue the alg header value
      * @return the byte [ ]
      */
+    @SneakyThrows
     public static byte[] signJws(final Key key, final byte[] value, final String algHeaderValue) {
-        try {
-            final String base64 = EncodingUtils.encodeBase64(value);
-            final JsonWebSignature jws = new JsonWebSignature();
-            jws.setPayload(base64);
-            jws.setAlgorithmHeaderValue(algHeaderValue);
-            jws.setKey(key);
-            return jws.getCompactSerialization().getBytes(StandardCharsets.UTF_8);
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        val base64 = EncodingUtils.encodeBase64(value);
+        val jws = new JsonWebSignature();
+        jws.setEncodedPayload(base64);
+        jws.setAlgorithmHeaderValue(algHeaderValue);
+        jws.setKey(key);
+        jws.setHeader("typ", "JWT");
+        return jws.getCompactSerialization().getBytes(StandardCharsets.UTF_8);
     }
 
     /**
@@ -342,7 +374,7 @@ public final class EncodingUtils {
      */
     public static String encryptValueAsJwtDirectAes128Sha256(final Key key, final Serializable value) {
         return encryptValueAsJwt(key, value, KeyManagementAlgorithmIdentifiers.DIRECT,
-                CipherExecutor.DEFAULT_CONTENT_ENCRYPTION_ALGORITHM);
+            CipherExecutor.DEFAULT_CONTENT_ENCRYPTION_ALGORITHM);
     }
 
     /**
@@ -354,9 +386,9 @@ public final class EncodingUtils {
      */
     public static String encryptValueAsJwtRsaOeap256Aes256Sha512(final Key key, final Serializable value) {
         return encryptValueAsJwt(key, value, KeyManagementAlgorithmIdentifiers.RSA_OAEP_256,
-                CipherExecutor.DEFAULT_CONTENT_ENCRYPTION_ALGORITHM);
+            CipherExecutor.DEFAULT_CONTENT_ENCRYPTION_ALGORITHM);
     }
-    
+
     /**
      * Encrypt the value based on the seed array whose length was given during afterPropertiesSet,
      * and the key and content encryption ids.
@@ -372,13 +404,14 @@ public final class EncodingUtils {
                                            final String algorithmHeaderValue,
                                            final String contentEncryptionAlgorithmIdentifier) {
         try {
-            final JsonWebEncryption jwe = new JsonWebEncryption();
+            val jwe = new JsonWebEncryption();
             jwe.setPayload(value.toString());
             jwe.enableDefaultCompression();
             jwe.setAlgorithmHeaderValue(algorithmHeaderValue);
             jwe.setEncryptionMethodHeaderParameter(contentEncryptionAlgorithmIdentifier);
             jwe.setKey(secretKeyEncryptionKey);
-            LOGGER.debug("Encrypting via [{}]", contentEncryptionAlgorithmIdentifier);
+            jwe.setHeader("typ", "JWT");
+            LOGGER.trace("Encrypting via [{}]", contentEncryptionAlgorithmIdentifier);
             return jwe.getCompactSerialization();
         } catch (final Exception e) {
             throw new IllegalArgumentException("Is JCE Unlimited Strength Jurisdiction Policy installed? " + e.getMessage(), e);
@@ -392,17 +425,13 @@ public final class EncodingUtils {
      * @param value                  the value
      * @return the decrypted value
      */
-    public static String decryptJwtValue(final Key secretKeyEncryptionKey,
-                                   final String value) {
-        try {
-            final JsonWebEncryption jwe = new JsonWebEncryption();
-            jwe.setKey(secretKeyEncryptionKey);
-            jwe.setCompactSerialization(value);
-            LOGGER.debug("Decrypting value...");
-            return jwe.getPayload();
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+    @SneakyThrows
+    public static String decryptJwtValue(final Key secretKeyEncryptionKey, final String value) {
+        val jwe = new JsonWebEncryption();
+        jwe.setKey(secretKeyEncryptionKey);
+        jwe.setCompactSerialization(value);
+        LOGGER.trace("Decrypting value...");
+        return jwe.getPayload();
     }
 
     /**
@@ -412,7 +441,7 @@ public final class EncodingUtils {
      */
     public static boolean isJceInstalled() {
         try {
-            final int maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
+            val maxKeyLen = Cipher.getMaxAllowedKeyLength("AES");
             return maxKeyLen == Integer.MAX_VALUE;
         } catch (final Exception e) {
             return false;

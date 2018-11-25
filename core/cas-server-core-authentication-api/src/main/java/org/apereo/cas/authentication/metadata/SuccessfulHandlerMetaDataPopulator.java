@@ -1,14 +1,14 @@
 package org.apereo.cas.authentication.metadata;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apereo.cas.authentication.AuthenticationBuilder;
 import org.apereo.cas.authentication.AuthenticationHandler;
 import org.apereo.cas.authentication.AuthenticationTransaction;
 import org.apereo.cas.authentication.Credential;
 import org.apereo.cas.util.CollectionUtils;
 
+import lombok.ToString;
+
 import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Sets an authentication attribute containing the collection of authentication handlers (by name) that successfully
@@ -20,26 +20,21 @@ import java.util.Set;
  * @author Alaa Nassef
  * @since 4.0.0
  */
+@ToString(callSuper = true)
 public class SuccessfulHandlerMetaDataPopulator extends BaseAuthenticationMetaDataPopulator {
 
     @Override
     public void populateAttributes(final AuthenticationBuilder builder, final AuthenticationTransaction transaction) {
-        Set<String> successes = builder.getSuccesses().keySet();
+        var successes = builder.getSuccesses().keySet();
         if (successes.isEmpty()) {
-            successes = new HashSet(successes);
+            builder.mergeAttribute(AuthenticationHandler.SUCCESSFUL_AUTHENTICATION_HANDLERS, new HashSet<>());
+        } else {
+            builder.mergeAttribute(AuthenticationHandler.SUCCESSFUL_AUTHENTICATION_HANDLERS, CollectionUtils.wrap(successes));
         }
-        builder.mergeAttribute(AuthenticationHandler.SUCCESSFUL_AUTHENTICATION_HANDLERS, CollectionUtils.wrap(successes));
     }
 
     @Override
     public boolean supports(final Credential credential) {
         return true;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-                .appendSuper(super.toString())
-                .toString();
     }
 }

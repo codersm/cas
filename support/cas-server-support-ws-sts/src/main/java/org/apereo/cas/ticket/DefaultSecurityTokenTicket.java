@@ -1,9 +1,12 @@
 package org.apereo.cas.ticket;
 
-import org.apache.commons.lang3.SerializationUtils;
-import org.apache.cxf.ws.security.tokenstore.SecurityToken;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.util.EncodingUtils;
+
+import lombok.NoArgsConstructor;
+import lombok.val;
+import org.apache.commons.lang3.SerializationUtils;
+import org.apache.cxf.ws.security.tokenstore.SecurityToken;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
@@ -22,6 +25,7 @@ import javax.persistence.Table;
 @Table(name = "SECURITYTOKENTICKET")
 @DiscriminatorColumn(name = "TYPE")
 @DiscriminatorValue(SecurityTokenTicket.PREFIX)
+@NoArgsConstructor
 public class DefaultSecurityTokenTicket extends AbstractTicket implements SecurityTokenTicket {
 
     private static final long serialVersionUID = 3940671352560102114L;
@@ -32,26 +36,20 @@ public class DefaultSecurityTokenTicket extends AbstractTicket implements Securi
     @Column(name = "SECURITY_TOKEN")
     private String securityToken;
 
-    public DefaultSecurityTokenTicket() {
-    }
-
-    public DefaultSecurityTokenTicket(final String id,
-                                      final TicketGrantingTicket ticketGrantingTicket,
-                                      final ExpirationPolicy expirationPolicy,
-                                      final String securityToken) {
+    public DefaultSecurityTokenTicket(final String id, final TicketGrantingTicket ticketGrantingTicket, final ExpirationPolicy expirationPolicy, final String securityToken) {
         super(id, expirationPolicy);
         this.ticketGrantingTicket = ticketGrantingTicket;
         this.securityToken = securityToken;
     }
 
     @Override
-    public TicketGrantingTicket getGrantingTicket() {
+    public TicketGrantingTicket getTicketGrantingTicket() {
         return this.ticketGrantingTicket;
     }
 
     @Override
     public Authentication getAuthentication() {
-        return getGrantingTicket().getAuthentication();
+        return getTicketGrantingTicket().getAuthentication();
     }
 
     @Override
@@ -61,7 +59,7 @@ public class DefaultSecurityTokenTicket extends AbstractTicket implements Securi
 
     @Override
     public SecurityToken getSecurityToken() {
-        final byte[] securityTokenBin = EncodingUtils.decodeBase64(this.securityToken);
+        val securityTokenBin = EncodingUtils.decodeBase64(this.securityToken);
         return SerializationUtils.deserialize(securityTokenBin);
     }
 }

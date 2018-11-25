@@ -7,8 +7,11 @@ import org.apereo.cas.ticket.accesstoken.AccessTokenImpl;
 import org.apereo.cas.ticket.accesstoken.OAuthAccessTokenExpirationPolicy;
 import org.apereo.cas.ticket.code.OAuthCodeExpirationPolicy;
 import org.apereo.cas.ticket.code.OAuthCodeImpl;
+import org.apereo.cas.ticket.device.DeviceTokenImpl;
+import org.apereo.cas.ticket.device.DeviceUserCodeImpl;
 import org.apereo.cas.ticket.refreshtoken.OAuthRefreshTokenExpirationPolicy;
 import org.apereo.cas.ticket.refreshtoken.RefreshTokenImpl;
+
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
@@ -21,7 +24,7 @@ import org.springframework.context.annotation.Configuration;
 @Configuration("casOAuthComponentSerializationConfiguration")
 @EnableConfigurationProperties(CasConfigurationProperties.class)
 public class CasOAuthComponentSerializationConfiguration implements ComponentSerializationPlanConfigurator {
-    
+
     @Override
     public void configureComponentSerializationPlan(final ComponentSerializationPlan plan) {
         plan.registerSerializableClass(OAuthAccessTokenExpirationPolicy.class);
@@ -31,5 +34,7 @@ public class CasOAuthComponentSerializationConfiguration implements ComponentSer
         plan.registerSerializableClass(OAuthCodeImpl.class);
         plan.registerSerializableClass(AccessTokenImpl.class);
         plan.registerSerializableClass(RefreshTokenImpl.class);
+        plan.registerSerializableClass(DeviceTokenImpl.class);
+        plan.registerSerializableClass(DeviceUserCodeImpl.class);
     }
 }

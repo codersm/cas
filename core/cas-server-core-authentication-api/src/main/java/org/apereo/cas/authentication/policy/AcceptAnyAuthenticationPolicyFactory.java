@@ -5,6 +5,7 @@ import org.apereo.cas.authentication.ContextualAuthenticationPolicy;
 import org.apereo.cas.authentication.ContextualAuthenticationPolicyFactory;
 import org.apereo.cas.services.ServiceContext;
 
+
 /**
  * Produces authentication policies that passively satisfy any given {@link Authentication}.
  *
@@ -15,7 +16,7 @@ public class AcceptAnyAuthenticationPolicyFactory implements ContextualAuthentic
 
     @Override
     public ContextualAuthenticationPolicy<ServiceContext> createPolicy(final ServiceContext context) {
-        return new ContextualAuthenticationPolicy<ServiceContext>() {
+        return new ContextualAuthenticationPolicy<>() {
 
             @Override
             public ServiceContext getContext() {

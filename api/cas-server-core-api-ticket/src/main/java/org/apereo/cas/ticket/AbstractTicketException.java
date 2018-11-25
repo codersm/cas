@@ -2,6 +2,7 @@ package org.apereo.cas.ticket;
 
 import org.apereo.cas.authentication.RootCasException;
 
+
 /**
  * Generic ticket exception. Top of the AbstractTicketException hierarchy.
  *
@@ -14,11 +15,11 @@ public abstract class AbstractTicketException extends RootCasException {
     /**
      * Instantiates a new ticket exception.
      *
-     * @param code the code
+     * @param code      the code
      * @param throwable the throwable
      */
     public AbstractTicketException(final String code, final Throwable throwable) {
-      super(code, throwable);
+        super(code, throwable);
     }
 
     /**
@@ -27,16 +28,16 @@ public abstract class AbstractTicketException extends RootCasException {
      * @param code the code
      */
     public AbstractTicketException(final String code) {
-      super(code);
+        super(code);
     }
 
     /**
      * Instantiates a new ticket exception.
      *
      * @param code the code
-     * @param msg the msg
+     * @param msg  the msg
      */
     public AbstractTicketException(final String code, final String msg) {
-      super(code, msg);
+        super(code, msg);
     }
 }

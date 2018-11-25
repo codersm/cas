@@ -3,16 +3,21 @@ package org.apereo.cas.support.events.authentication.surrogate;
 import org.apereo.cas.authentication.principal.Principal;
 import org.apereo.cas.support.events.AbstractCasEvent;
 
+import lombok.Getter;
+
 /**
  * This is {@link CasSurrogateAuthenticationSuccessfulEvent}.
  *
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Getter
 public class CasSurrogateAuthenticationSuccessfulEvent extends AbstractCasEvent {
+
     private static final long serialVersionUID = 8059647975948452375L;
 
     private final Principal principal;
+
     private final String surrogate;
 
     /**
@@ -26,13 +31,5 @@ public class CasSurrogateAuthenticationSuccessfulEvent extends AbstractCasEvent 
         super(source);
         this.principal = principal;
         this.surrogate = surrogate;
-    }
-
-    public Principal getPrincipal() {
-        return principal;
-    }
-
-    public String getSurrogate() {
-        return surrogate;
     }
 }

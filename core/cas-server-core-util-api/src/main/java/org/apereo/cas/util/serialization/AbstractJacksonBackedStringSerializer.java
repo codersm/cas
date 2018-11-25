@@ -1,5 +1,7 @@
 package org.apereo.cas.util.serialization;
 
+import org.apereo.cas.util.DigestUtils;
+
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
@@ -12,13 +14,15 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.apereo.cas.util.DigestUtils;
 import org.hjson.JsonValue;
 import org.hjson.Stringify;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,22 +33,22 @@ import java.io.StringWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.stream.Collectors;
 
 /**
  * Generic class to serialize objects to/from JSON based on jackson.
  *
+ * @param <T> the type parameter
  * @author Misagh Moayyed
- *  @param <T> the type parameter
- *  @since 4.1
+ * @since 4.1
  */
+@Slf4j
+@Getter
+@RequiredArgsConstructor
 public abstract class AbstractJacksonBackedStringSerializer<T> implements StringSerializer<T> {
     private static final long serialVersionUID = -8415599777321259365L;
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractJacksonBackedStringSerializer.class);
-
-    private final PrettyPrinter prettyPrinter;
 
     private final ObjectMapper objectMapper;
+    private final transient PrettyPrinter prettyPrinter;
 
     /**
      * Instantiates a new Registered service json serializer.
@@ -64,55 +68,33 @@ public abstract class AbstractJacksonBackedStringSerializer<T> implements String
         this.prettyPrinter = prettyPrinter;
     }
 
-    /**
-     * Instantiates a new Registered service json serializer.
-     *
-     * @param objectMapper  the object mapper
-     * @param prettyPrinter the pretty printer
-     */
-    public AbstractJacksonBackedStringSerializer(final ObjectMapper objectMapper, final PrettyPrinter prettyPrinter) {
-        this.objectMapper = objectMapper;
-        this.prettyPrinter = prettyPrinter;
-    }
-
     private boolean isJsonFormat() {
         return !(this.objectMapper.getFactory() instanceof YAMLFactory);
     }
 
     @Override
+    @SneakyThrows
     public T from(final String json) {
-        try {
-            final String jsonString = isJsonFormat() ? JsonValue.readHjson(json).toString() : json;
-            return readObjectFromJson(jsonString);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
-        }
+        val jsonString = isJsonFormat() ? JsonValue.readHjson(json).toString() : json;
+        return readObjectFromString(jsonString);
     }
 
     @Override
+    @SneakyThrows
     public T from(final File json) {
-        try {
-            final String jsonString = isJsonFormat()
-                ? JsonValue.readHjson(FileUtils.readFileToString(json, StandardCharsets.UTF_8)).toString()
-                : FileUtils.readFileToString(json, StandardCharsets.UTF_8);
-
-            return readObjectFromJson(jsonString);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
-        }
+        val string = isJsonFormat()
+            ? JsonValue.readHjson(FileUtils.readFileToString(json, StandardCharsets.UTF_8)).toString()
+            : FileUtils.readFileToString(json, StandardCharsets.UTF_8);
+        return readObjectFromString(string);
     }
 
     @Override
+    @SneakyThrows
     public T from(final Reader json) {
-        try {
-            final String jsonString = isJsonFormat()
-                ? JsonValue.readHjson(json).toString()
-                : IOUtils.readLines(json).stream().collect(Collectors.joining());
-
-            return readObjectFromJson(jsonString);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
-        }
+        val string = isJsonFormat()
+            ? JsonValue.readHjson(json).toString()
+            : String.join("\n", IOUtils.readLines(json));
+        return readObjectFromString(string);
     }
 
     @Override
@@ -121,13 +103,10 @@ public abstract class AbstractJacksonBackedStringSerializer<T> implements String
     }
 
     @Override
+    @SneakyThrows
     public T from(final InputStream json) {
-        try {
-            final String jsonString = readJsonFrom(json);
-            return readObjectFromJson(jsonString);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
-        }
+        val jsonString = readJsonFrom(json);
+        return readObjectFromString(jsonString);
     }
 
     /**
@@ -140,64 +119,60 @@ public abstract class AbstractJacksonBackedStringSerializer<T> implements String
     protected String readJsonFrom(final InputStream json) throws IOException {
         return isJsonFormat()
             ? JsonValue.readHjson(IOUtils.toString(json, StandardCharsets.UTF_8)).toString()
-            : IOUtils.readLines(json, StandardCharsets.UTF_8).stream().collect(Collectors.joining("\n"));
+            : String.join("\n", IOUtils.readLines(json, StandardCharsets.UTF_8));
     }
 
     @Override
+    @SneakyThrows
     public void to(final OutputStream out, final T object) {
-        try (StringWriter writer = new StringWriter()) {
+        try (val writer = new StringWriter()) {
             this.objectMapper.writer(this.prettyPrinter).writeValue(writer, object);
-            final String hjsonString = isJsonFormat()
+            val hjsonString = isJsonFormat()
                 ? JsonValue.readHjson(writer.toString()).toString(Stringify.HJSON)
                 : writer.toString();
             IOUtils.write(hjsonString, out, StandardCharsets.UTF_8);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
         }
     }
 
     @Override
+    @SneakyThrows
     public void to(final Writer out, final T object) {
-        try (StringWriter writer = new StringWriter()) {
+        try (val writer = new StringWriter()) {
             this.objectMapper.writer(this.prettyPrinter).writeValue(writer, object);
 
             if (isJsonFormat()) {
-                final Stringify opt = this.prettyPrinter instanceof MinimalPrettyPrinter ? Stringify.PLAIN : Stringify.FORMATTED;
+                val opt = this.prettyPrinter instanceof MinimalPrettyPrinter ? Stringify.PLAIN : Stringify.FORMATTED;
                 JsonValue.readHjson(writer.toString()).writeTo(out, opt);
             } else {
                 IOUtils.write(writer.toString(), out);
             }
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
         }
     }
 
     @Override
+    @SneakyThrows
     public void to(final File out, final T object) {
-        try (StringWriter writer = new StringWriter()) {
+        try (val writer = new StringWriter()) {
             this.objectMapper.writer(this.prettyPrinter).writeValue(writer, object);
 
             if (isJsonFormat()) {
-                try (Writer fileWriter = Files.newBufferedWriter(out.toPath(), StandardCharsets.UTF_8)) {
-                    final Stringify opt = this.prettyPrinter instanceof MinimalPrettyPrinter ? Stringify.PLAIN : Stringify.FORMATTED;
+                try (val fileWriter = Files.newBufferedWriter(out.toPath(), StandardCharsets.UTF_8)) {
+                    val opt = this.prettyPrinter instanceof MinimalPrettyPrinter ? Stringify.PLAIN : Stringify.FORMATTED;
                     JsonValue.readHjson(writer.toString()).writeTo(fileWriter, opt);
                     fileWriter.flush();
                 }
             } else {
                 FileUtils.write(out, writer.toString(), StandardCharsets.UTF_8);
             }
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
         }
     }
 
     @Override
+    @SneakyThrows
     public String toString(final T object) {
-        try (StringWriter writer = new StringWriter()) {
+        try (val writer = new StringWriter()) {
             to(writer, object);
             return writer.toString();
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e);
         }
     }
 
@@ -207,7 +182,7 @@ public abstract class AbstractJacksonBackedStringSerializer<T> implements String
      * @return the object mapper
      */
     protected ObjectMapper initializeObjectMapper() {
-        final ObjectMapper mapper = new ObjectMapper(getJsonFactory());
+        val mapper = new ObjectMapper(getJsonFactory());
         configureObjectMapper(mapper);
         return mapper;
     }
@@ -247,26 +222,23 @@ public abstract class AbstractJacksonBackedStringSerializer<T> implements String
      */
     protected abstract Class<T> getTypeToSerialize();
 
-    public ObjectMapper getObjectMapper() {
-        return objectMapper;
-    }
-
     /**
      * Read object from json.
      *
      * @param jsonString the json string
      * @return the type
      */
-    protected T readObjectFromJson(final String jsonString) {
+    protected T readObjectFromString(final String jsonString) {
         try {
+            LOGGER.trace("Attempting to consume [{}]", jsonString);
             return this.objectMapper.readValue(jsonString, getTypeToSerialize());
         } catch (final Exception e) {
-            LOGGER.error("Cannot read/parse JSON [{}] to deserialize into type [{}]. This may be caused "
-                    + "in the absence of a configuration/support module that knows how to interpret the JSON fragment, "
+            LOGGER.error("Cannot read/parse [{}] to deserialize into type [{}]. This may be caused "
+                    + "in the absence of a configuration/support module that knows how to interpret the fragment, "
                     + "specially if the fragment describes a CAS registered service definition. "
                     + "Internal parsing error is [{}]",
                 DigestUtils.abbreviate(jsonString), getTypeToSerialize(), e.getMessage());
-            LOGGER.trace(e.getMessage(), e);
+            LOGGER.debug(e.getMessage(), e);
         }
         return null;
     }

@@ -1,6 +1,8 @@
 package org.apereo.cas.interrupt.webflow;
 
 import org.apereo.cas.interrupt.InterruptResponse;
+
+import lombok.experimental.UtilityClass;
 import org.springframework.webflow.execution.RequestContext;
 
 /**
@@ -9,11 +11,8 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
-public final class InterruptUtils {
-
-    private InterruptUtils() {
-    }
-
+@UtilityClass
+public class InterruptUtils {
     /**
      * Gets interrupt from.
      *
@@ -21,7 +20,7 @@ public final class InterruptUtils {
      * @return the interrupt from
      */
     public static InterruptResponse getInterruptFrom(final RequestContext ctx) {
-        return ctx.getFlowScope().get("interrupt", InterruptResponse.class);   
+        return ctx.getFlowScope().get("interrupt", InterruptResponse.class);
     }
 
     /**

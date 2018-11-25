@@ -2,6 +2,8 @@ package org.apereo.cas.authentication.support.password;
 
 import org.apereo.cas.DefaultMessageDescriptor;
 
+import java.io.Serializable;
+
 /**
  * Message conveying account password expiration warning details.
  *
@@ -10,24 +12,28 @@ import org.apereo.cas.DefaultMessageDescriptor;
  * @since 4.0.0
  */
 public class PasswordExpiringWarningMessageDescriptor extends DefaultMessageDescriptor {
-    /** Serialization version marker. */
+    /**
+     * Serialization version marker.
+     */
     private static final long serialVersionUID = -5892600936676838470L;
 
-    /** Message bundle code. */
+    /**
+     * Message bundle code.
+     */
     private static final String CODE = "password.expiration.warning";
 
     /**
      * Creates a new instance.
      *
-     * @param defaultMsg  Default warning message.
-     * @param days Days to password expiration.
+     * @param defaultMsg Default warning message.
+     * @param days       Days to password expiration.
      */
     public PasswordExpiringWarningMessageDescriptor(final String defaultMsg, final long days) {
-        super(CODE, defaultMsg, days);
+        super(CODE, defaultMsg, new Serializable[]{days});
     }
 
     public long getDaysToExpiration() {
         return (Long) getParams()[0];
     }
-    
+
 }

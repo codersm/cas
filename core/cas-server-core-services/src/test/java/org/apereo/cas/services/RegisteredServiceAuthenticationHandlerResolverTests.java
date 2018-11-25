@@ -2,15 +2,18 @@ package org.apereo.cas.services;
 
 import org.apereo.cas.authentication.AcceptUsersAuthenticationHandler;
 import org.apereo.cas.authentication.AuthenticationHandler;
-import org.apereo.cas.authentication.AuthenticationTransaction;
-import org.apereo.cas.authentication.RegisteredServiceAuthenticationHandlerResolver;
+import org.apereo.cas.authentication.DefaultAuthenticationTransaction;
+import org.apereo.cas.authentication.handler.DefaultAuthenticationHandlerResolver;
+import org.apereo.cas.authentication.handler.RegisteredServiceAuthenticationHandlerResolver;
+import org.apereo.cas.util.CollectionUtils;
+
+import lombok.val;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -27,15 +30,15 @@ import static org.mockito.Mockito.*;
 public class RegisteredServiceAuthenticationHandlerResolverTests {
 
     private DefaultServicesManager defaultServicesManager;
-    private Set<AuthenticationHandler> handlers;
+    private Set<AuthenticationHandler> authenticationHandlers;
 
     @Before
-    public void setUp() {
-        final InMemoryServiceRegistry dao = new InMemoryServiceRegistry();
-        final List<RegisteredService> list = new ArrayList<>();
+    public void initialize() {
+        val dao = new InMemoryServiceRegistry();
+        val list = new ArrayList<RegisteredService>();
 
-        AbstractRegisteredService svc = RegisteredServiceTestUtils.getRegisteredService("serviceid1");
-        svc.setRequiredHandlers(Stream.of("handler1", "handler3").collect(Collectors.toSet()));
+        var svc = RegisteredServiceTestUtils.getRegisteredService("serviceid1");
+        svc.setRequiredHandlers(CollectionUtils.wrapHashSet("handler1", "handler2"));
         list.add(svc);
 
         svc = RegisteredServiceTestUtils.getRegisteredService("serviceid2");
@@ -44,36 +47,34 @@ public class RegisteredServiceAuthenticationHandlerResolverTests {
 
         dao.setRegisteredServices(list);
 
-        this.defaultServicesManager = new DefaultServicesManager(dao, mock(ApplicationEventPublisher.class));
+        this.defaultServicesManager = new DefaultServicesManager(dao, mock(ApplicationEventPublisher.class), new HashSet<>());
         this.defaultServicesManager.load();
 
-        final AcceptUsersAuthenticationHandler handler1 = new AcceptUsersAuthenticationHandler("handler1");
+        val handler1 = new AcceptUsersAuthenticationHandler("handler1");
+        val handler2 = new AcceptUsersAuthenticationHandler("handler2");
+        val handler3 = new AcceptUsersAuthenticationHandler("handler3");
 
-        final AcceptUsersAuthenticationHandler handler2 = new AcceptUsersAuthenticationHandler("handler2");
-
-        final AcceptUsersAuthenticationHandler handler3 = new AcceptUsersAuthenticationHandler("handler3");
-
-        this.handlers = Stream.of(handler1, handler2, handler3).collect(Collectors.toSet());
+        this.authenticationHandlers = Stream.of(handler1, handler2, handler3).collect(Collectors.toSet());
     }
 
     @Test
     public void checkAuthenticationHandlerResolutionDefault() {
-        final RegisteredServiceAuthenticationHandlerResolver resolver =
-                new RegisteredServiceAuthenticationHandlerResolver(this.defaultServicesManager);
-        final AuthenticationTransaction transaction = AuthenticationTransaction.wrap(RegisteredServiceTestUtils.getService("serviceid1"),
-                RegisteredServiceTestUtils.getCredentialsWithSameUsernameAndPassword("casuser"));
+        val resolver =
+            new RegisteredServiceAuthenticationHandlerResolver(this.defaultServicesManager);
+        val transaction = DefaultAuthenticationTransaction.of(RegisteredServiceTestUtils.getService("serviceid1"),
+            RegisteredServiceTestUtils.getCredentialsWithSameUsernameAndPassword("casuser"));
 
-        final Set<AuthenticationHandler> handlers = resolver.resolve(this.handlers, transaction);
+        val handlers = resolver.resolve(this.authenticationHandlers, transaction);
         assertEquals(2, handlers.size());
     }
 
     @Test
     public void checkAuthenticationHandlerResolution() {
-        final RegisteredServiceAuthenticationHandlerResolver resolver =
-                new RegisteredServiceAuthenticationHandlerResolver(this.defaultServicesManager);
-        final AuthenticationTransaction transaction = AuthenticationTransaction.wrap(RegisteredServiceTestUtils.getService("serviceid2"),
-                RegisteredServiceTestUtils.getCredentialsWithSameUsernameAndPassword("casuser"));
-        final Set<AuthenticationHandler> handlers = resolver.resolve(this.handlers, transaction);
-        assertEquals(handlers.size(), this.handlers.size());
+        val resolver =
+            new DefaultAuthenticationHandlerResolver();
+        val transaction = DefaultAuthenticationTransaction.of(RegisteredServiceTestUtils.getService("serviceid2"),
+            RegisteredServiceTestUtils.getCredentialsWithSameUsernameAndPassword("casuser"));
+        val handlers = resolver.resolve(this.authenticationHandlers, transaction);
+        assertEquals(handlers.size(), this.authenticationHandlers.size());
     }
 }

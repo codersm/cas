@@ -1,25 +1,35 @@
 package org.apereo.cas.audit.spi.config;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.audit.spi.AuditPrincipalIdProvider;
-import org.apereo.cas.audit.spi.CredentialsAsFirstParameterResourceResolver;
-import org.apereo.cas.audit.spi.DefaultDelegatingAuditTrailManager;
-import org.apereo.cas.audit.spi.DelegatingAuditTrailManager;
-import org.apereo.cas.audit.spi.MessageBundleAwareResourceResolver;
-import org.apereo.cas.audit.spi.NullableReturnValueAuditResourceResolver;
-import org.apereo.cas.audit.spi.ServiceResourceResolver;
-import org.apereo.cas.audit.spi.ShortenedReturnValueAsStringResourceResolver;
-import org.apereo.cas.audit.spi.ThreadLocalPrincipalResolver;
-import org.apereo.cas.audit.spi.TicketAsFirstParameterResourceResolver;
-import org.apereo.cas.audit.spi.TicketValidationResourceResolver;
+import org.apereo.cas.audit.AuditPrincipalIdProvider;
+import org.apereo.cas.audit.AuditTrailConstants;
+import org.apereo.cas.audit.AuditTrailExecutionPlan;
+import org.apereo.cas.audit.AuditTrailExecutionPlanConfigurer;
+import org.apereo.cas.audit.AuditTrailRecordResolutionPlan;
+import org.apereo.cas.audit.AuditTrailRecordResolutionPlanConfigurer;
+import org.apereo.cas.audit.spi.plan.DefaultAuditTrailExecutionPlan;
+import org.apereo.cas.audit.spi.plan.DefaultAuditTrailRecordResolutionPlan;
+import org.apereo.cas.audit.spi.principal.ChainingAuditPrincipalIdProvider;
+import org.apereo.cas.audit.spi.principal.ThreadLocalPrincipalResolver;
+import org.apereo.cas.audit.spi.resource.CredentialsAsFirstParameterResourceResolver;
+import org.apereo.cas.audit.spi.resource.MessageBundleAwareResourceResolver;
+import org.apereo.cas.audit.spi.resource.NullableReturnValueAuditResourceResolver;
+import org.apereo.cas.audit.spi.resource.ServiceAccessEnforcementAuditResourceResolver;
+import org.apereo.cas.audit.spi.resource.ServiceResourceResolver;
+import org.apereo.cas.audit.spi.resource.ShortenedReturnValueAsStringResourceResolver;
+import org.apereo.cas.audit.spi.resource.TicketAsFirstParameterResourceResolver;
+import org.apereo.cas.audit.spi.resource.TicketValidationResourceResolver;
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.configuration.model.core.audit.AuditProperties;
 import org.apereo.cas.util.CollectionUtils;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.RegExUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apereo.inspektr.audit.AuditTrailManagementAspect;
-import org.apereo.inspektr.audit.AuditTrailManager;
 import org.apereo.inspektr.audit.spi.AuditActionResolver;
 import org.apereo.inspektr.audit.spi.AuditResourceResolver;
 import org.apereo.inspektr.audit.spi.support.DefaultAuditActionResolver;
+import org.apereo.inspektr.audit.support.AbstractStringAuditTrailManager;
 import org.apereo.inspektr.audit.support.Slf4jLoggingAuditTrailManager;
 import org.apereo.inspektr.common.spi.PrincipalResolver;
 import org.apereo.inspektr.common.web.ClientInfoThreadLocalFilter;
@@ -28,12 +38,16 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.EnableAspectJAutoProxy;
 import org.springframework.core.Ordered;
+import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -45,46 +59,65 @@ import java.util.Map;
 @Configuration("casCoreAuditConfiguration")
 @EnableAspectJAutoProxy
 @EnableConfigurationProperties(CasConfigurationProperties.class)
-public class CasCoreAuditConfiguration {
-
-    private static final String AUDIT_ACTION_SUFFIX_FAILED = "_FAILED";
+@Slf4j
+public class CasCoreAuditConfiguration implements AuditTrailExecutionPlanConfigurer, AuditTrailRecordResolutionPlanConfigurer {
 
     @Autowired
     private CasConfigurationProperties casProperties;
 
+    @Autowired
+    private ApplicationContext applicationContext;
+
     @Bean
-    public AuditTrailManagementAspect auditTrailManagementAspect(@Qualifier("auditTrailManager") final AuditTrailManager auditTrailManager) {
-        final AuditTrailManagementAspect aspect = new AuditTrailManagementAspect(
+    public AuditTrailManagementAspect auditTrailManagementAspect(@Qualifier("auditTrailExecutionPlan") final AuditTrailExecutionPlan auditTrailExecutionPlan,
+                                                                 @Qualifier("auditTrailRecordResolutionPlan") final AuditTrailRecordResolutionPlan auditTrailRecordResolutionPlan) {
+        val aspect = new AuditTrailManagementAspect(
             casProperties.getAudit().getAppCode(),
             auditablePrincipalResolver(auditPrincipalIdProvider()),
-            CollectionUtils.wrap(auditTrailManager), auditActionResolverMap(),
-            auditResourceResolverMap());
+            auditTrailExecutionPlan.getAuditTrailManagers(), auditTrailRecordResolutionPlan.getAuditActionResolvers(),
+            auditTrailRecordResolutionPlan.getAuditResourceResolvers());
         aspect.setFailOnAuditFailures(!casProperties.getAudit().isIgnoreAuditFailures());
         return aspect;
     }
 
-    @ConditionalOnMissingBean(name = "auditTrailManager")
+    @Autowired
+    @ConditionalOnMissingBean(name = "auditTrailRecordResolutionPlan")
     @Bean
-    public DelegatingAuditTrailManager auditTrailManager() {
-        final Slf4jLoggingAuditTrailManager mgmr = new Slf4jLoggingAuditTrailManager();
-        mgmr.setUseSingleLine(casProperties.getAudit().isUseSingleLine());
-        mgmr.setEntrySeparator(casProperties.getAudit().getSinglelineSeparator());
-        mgmr.setAuditFormat(casProperties.getAudit().getAuditFormat());
-        return new DefaultDelegatingAuditTrailManager(mgmr);
+    public AuditTrailRecordResolutionPlan auditTrailRecordResolutionPlan(final List<AuditTrailRecordResolutionPlanConfigurer> configurers) {
+        val plan = new DefaultAuditTrailRecordResolutionPlan();
+        configurers.forEach(c -> {
+            val name = RegExUtils.removePattern(c.getClass().getSimpleName(), "\\$.+");
+            LOGGER.trace("Registering audit trail manager [{}]", name);
+            c.configureAuditTrailRecordResolutionPlan(plan);
+        });
+        return plan;
+    }
+
+    @Autowired
+    @ConditionalOnMissingBean(name = "auditTrailExecutionPlan")
+    @Bean
+    public AuditTrailExecutionPlan auditTrailExecutionPlan(final List<AuditTrailExecutionPlanConfigurer> configurers) {
+        val plan = new DefaultAuditTrailExecutionPlan();
+        configurers.forEach(c -> {
+            val name = RegExUtils.removePattern(c.getClass().getSimpleName(), "\\$.+");
+            LOGGER.trace("Configuring audit trail execution plan via [{}]", name);
+            c.configureAuditTrailExecutionPlan(plan);
+        });
+        return plan;
     }
 
     @Bean
     public FilterRegistrationBean casClientInfoLoggingFilter() {
-        final AuditProperties audit = casProperties.getAudit();
+        val audit = casProperties.getAudit();
 
-        final FilterRegistrationBean bean = new FilterRegistrationBean();
+        val bean = new FilterRegistrationBean();
         bean.setFilter(new ClientInfoThreadLocalFilter());
         bean.setUrlPatterns(CollectionUtils.wrap("/*"));
         bean.setName("CAS Client Info Logging Filter");
         bean.setAsyncSupported(true);
         bean.setOrder(Ordered.HIGHEST_PRECEDENCE);
 
-        final Map<String, String> initParams = new HashMap<>();
+        val initParams = new HashMap<String, String>();
         if (StringUtils.isNotBlank(audit.getAlternateClientAddrHeaderName())) {
             initParams.put(ClientInfoThreadLocalFilter.CONST_IP_ADDRESS_HEADER, audit.getAlternateClientAddrHeaderName());
         }
@@ -101,19 +134,20 @@ public class CasCoreAuditConfiguration {
     @ConditionalOnMissingBean(name = "authenticationActionResolver")
     @Bean
     public AuditActionResolver authenticationActionResolver() {
-        return new DefaultAuditActionResolver("_SUCCESS", AUDIT_ACTION_SUFFIX_FAILED);
+        return new DefaultAuditActionResolver(AuditTrailConstants.AUDIT_ACTION_POSTFIX_SUCCESS,
+            AuditTrailConstants.AUDIT_ACTION_POSTFIX_FAILED);
     }
 
     @ConditionalOnMissingBean(name = "ticketCreationActionResolver")
     @Bean
     public AuditActionResolver ticketCreationActionResolver() {
-        return new DefaultAuditActionResolver("_CREATED", "_NOT_CREATED");
+        return new DefaultAuditActionResolver(AuditTrailConstants.AUDIT_ACTION_POSTFIX_CREATED, "_NOT_CREATED");
     }
 
     @ConditionalOnMissingBean(name = "ticketValidationActionResolver")
     @Bean
     public AuditActionResolver ticketValidationActionResolver() {
-        return new DefaultAuditActionResolver("D", AUDIT_ACTION_SUFFIX_FAILED);
+        return new DefaultAuditActionResolver(AuditTrailConstants.AUDIT_ACTION_POSTFIX_SUCCESS, AuditTrailConstants.AUDIT_ACTION_POSTFIX_FAILED);
     }
 
     @ConditionalOnMissingBean(name = "returnValueResourceResolver")
@@ -128,37 +162,10 @@ public class CasCoreAuditConfiguration {
         return new NullableReturnValueAuditResourceResolver(returnValueResourceResolver());
     }
 
-    @ConditionalOnMissingBean(name = "auditActionResolverMap")
+    @ConditionalOnMissingBean(name = "serviceAccessEnforcementAuditResourceResolver")
     @Bean
-    public Map<String, AuditActionResolver> auditActionResolverMap() {
-        final Map<String, AuditActionResolver> map = new HashMap<>();
-
-        final AuditActionResolver resolver = authenticationActionResolver();
-        map.put("AUTHENTICATION_RESOLVER", resolver);
-        map.put("SAVE_SERVICE_ACTION_RESOLVER", resolver);
-        map.put("SAVE_CONSENT_ACTION_RESOLVER", resolver);
-        map.put("CHANGE_PASSWORD_ACTION_RESOLVER", resolver);
-
-        final AuditActionResolver defResolver = new DefaultAuditActionResolver();
-        map.put("DESTROY_TICKET_GRANTING_TICKET_RESOLVER", defResolver);
-        map.put("DESTROY_PROXY_GRANTING_TICKET_RESOLVER", defResolver);
-
-        final AuditActionResolver cResolver = ticketCreationActionResolver();
-        map.put("CREATE_PROXY_GRANTING_TICKET_RESOLVER", cResolver);
-        map.put("GRANT_SERVICE_TICKET_RESOLVER", cResolver);
-        map.put("GRANT_PROXY_TICKET_RESOLVER", cResolver);
-        map.put("CREATE_TICKET_GRANTING_TICKET_RESOLVER", cResolver);
-        map.put("TRUSTED_AUTHENTICATION_ACTION_RESOLVER", cResolver);
-
-        map.put("AUTHENTICATION_EVENT_ACTION_RESOLVER", new DefaultAuditActionResolver("_TRIGGERED", StringUtils.EMPTY));
-        final AuditActionResolver adResolver = new DefaultAuditActionResolver();
-        map.put("ADAPTIVE_RISKY_AUTHENTICATION_ACTION_RESOLVER", adResolver);
-
-        map.put("VALIDATE_SERVICE_TICKET_RESOLVER", ticketValidationActionResolver());
-
-        map.putAll(customAuditActionResolverMap());
-
-        return map;
+    public ServiceAccessEnforcementAuditResourceResolver serviceAccessEnforcementAuditResourceResolver() {
+        return new ServiceAccessEnforcementAuditResourceResolver();
     }
 
     /**
@@ -170,38 +177,6 @@ public class CasCoreAuditConfiguration {
     @Bean
     public Map<String, AuditActionResolver> customAuditActionResolverMap() {
         return new HashMap<>(0);
-    }
-
-    @ConditionalOnMissingBean(name = "auditResourceResolverMap")
-    @Bean
-    public Map<String, AuditResourceResolver> auditResourceResolverMap() {
-        final Map<String, AuditResourceResolver> map = new HashMap<>();
-
-        map.put("AUTHENTICATION_RESOURCE_RESOLVER", new CredentialsAsFirstParameterResourceResolver());
-
-        final AuditResourceResolver messageBundleAwareResourceResolver = messageBundleAwareResourceResolver();
-        map.put("CREATE_TICKET_GRANTING_TICKET_RESOURCE_RESOLVER", messageBundleAwareResourceResolver);
-        map.put("CREATE_PROXY_GRANTING_TICKET_RESOURCE_RESOLVER", messageBundleAwareResourceResolver);
-
-        final AuditResourceResolver ticketResourceResolver = ticketResourceResolver();
-        map.put("DESTROY_TICKET_GRANTING_TICKET_RESOURCE_RESOLVER", ticketResourceResolver);
-        map.put("DESTROY_PROXY_GRANTING_TICKET_RESOURCE_RESOLVER", ticketResourceResolver);
-
-        map.put("GRANT_SERVICE_TICKET_RESOURCE_RESOLVER", new ServiceResourceResolver());
-        map.put("GRANT_PROXY_TICKET_RESOURCE_RESOLVER", new ServiceResourceResolver());
-
-        map.put("VALIDATE_SERVICE_TICKET_RESOURCE_RESOLVER", ticketValidationResourceResolver());
-
-        final AuditResourceResolver returnValueResourceResolver = returnValueResourceResolver();
-        map.put("SAVE_SERVICE_RESOURCE_RESOLVER", returnValueResourceResolver);
-        map.put("SAVE_CONSENT_RESOURCE_RESOLVER", returnValueResourceResolver);
-        map.put("CHANGE_PASSWORD_RESOURCE_RESOLVER", returnValueResourceResolver);
-        map.put("TRUSTED_AUTHENTICATION_RESOURCE_RESOLVER", returnValueResourceResolver);
-        map.put("ADAPTIVE_RISKY_AUTHENTICATION_RESOURCE_RESOLVER", returnValueResourceResolver);
-
-        map.put("AUTHENTICATION_EVENT_RESOURCE_RESOLVER", nullableReturnValueResourceResolver());
-        map.putAll(customAuditResourceResolverMap());
-        return map;
     }
 
     /**
@@ -230,7 +205,7 @@ public class CasCoreAuditConfiguration {
     @ConditionalOnMissingBean(name = "ticketValidationResourceResolver")
     @Bean
     public AuditResourceResolver ticketValidationResourceResolver() {
-        final AuditProperties audit = casProperties.getAudit();
+        val audit = casProperties.getAudit();
         if (audit.isIncludeValidationAssertion()) {
             return new TicketValidationResourceResolver();
         }
@@ -240,13 +215,80 @@ public class CasCoreAuditConfiguration {
     @ConditionalOnMissingBean(name = "messageBundleAwareResourceResolver")
     @Bean
     public AuditResourceResolver messageBundleAwareResourceResolver() {
-        return new MessageBundleAwareResourceResolver();
+        return new MessageBundleAwareResourceResolver(applicationContext);
     }
 
     @ConditionalOnMissingBean(name = "auditPrincipalIdProvider")
     @Bean
     public AuditPrincipalIdProvider auditPrincipalIdProvider() {
-        return new AuditPrincipalIdProvider() {
-        };
+        val resolvers = applicationContext.getBeansOfType(AuditPrincipalIdProvider.class, false, true);
+        val providers = new ArrayList<AuditPrincipalIdProvider>(resolvers.values());
+        AnnotationAwareOrderComparator.sort(providers);
+        return new ChainingAuditPrincipalIdProvider(providers);
+    }
+
+    @Override
+    public void configureAuditTrailExecutionPlan(final AuditTrailExecutionPlan plan) {
+        val audit = casProperties.getAudit().getSlf4j();
+        val slf4j = new Slf4jLoggingAuditTrailManager();
+        slf4j.setUseSingleLine(audit.isUseSingleLine());
+        slf4j.setEntrySeparator(audit.getSinglelineSeparator());
+        slf4j.setAuditFormat(AbstractStringAuditTrailManager.AuditFormats.valueOf(audit.getAuditFormat().toUpperCase()));
+        plan.registerAuditTrailManager(slf4j);
+    }
+
+    @Override
+    public void configureAuditTrailRecordResolutionPlan(final AuditTrailRecordResolutionPlan plan) {
+        /*
+            Add audit action resolvers here.
+         */
+        val resolver = authenticationActionResolver();
+        plan.registerAuditActionResolver("AUTHENTICATION_RESOLVER", resolver);
+        plan.registerAuditActionResolver("SAVE_SERVICE_ACTION_RESOLVER", resolver);
+
+        val defResolver = new DefaultAuditActionResolver();
+        plan.registerAuditActionResolver("DESTROY_TICKET_GRANTING_TICKET_RESOLVER", defResolver);
+        plan.registerAuditActionResolver("DESTROY_PROXY_GRANTING_TICKET_RESOLVER", defResolver);
+
+        val cResolver = ticketCreationActionResolver();
+        plan.registerAuditActionResolver("CREATE_PROXY_GRANTING_TICKET_RESOLVER", cResolver);
+        plan.registerAuditActionResolver("GRANT_SERVICE_TICKET_RESOLVER", cResolver);
+        plan.registerAuditActionResolver("GRANT_PROXY_TICKET_RESOLVER", cResolver);
+        plan.registerAuditActionResolver("CREATE_TICKET_GRANTING_TICKET_RESOLVER", cResolver);
+
+        val authResolver = new DefaultAuditActionResolver(AuditTrailConstants.AUDIT_ACTION_POSTFIX_TRIGGERED, StringUtils.EMPTY);
+        plan.registerAuditActionResolver("AUTHENTICATION_EVENT_ACTION_RESOLVER", authResolver);
+        plan.registerAuditActionResolver("VALIDATE_SERVICE_TICKET_RESOLVER", ticketValidationActionResolver());
+
+        val serviceAccessResolver = new DefaultAuditActionResolver(AuditTrailConstants.AUDIT_ACTION_POSTFIX_TRIGGERED, StringUtils.EMPTY);
+        plan.registerAuditActionResolver("SERVICE_ACCESS_ENFORCEMENT_ACTION_RESOLVER", serviceAccessResolver);
+
+        /*
+            Add audit resource resolvers here.
+         */
+        plan.registerAuditResourceResolver("AUTHENTICATION_RESOURCE_RESOLVER", new CredentialsAsFirstParameterResourceResolver());
+
+        val messageBundleAwareResourceResolver = messageBundleAwareResourceResolver();
+        plan.registerAuditResourceResolver("CREATE_TICKET_GRANTING_TICKET_RESOURCE_RESOLVER", messageBundleAwareResourceResolver);
+        plan.registerAuditResourceResolver("CREATE_PROXY_GRANTING_TICKET_RESOURCE_RESOLVER", messageBundleAwareResourceResolver);
+
+        val ticketResourceResolver = ticketResourceResolver();
+        plan.registerAuditResourceResolver("DESTROY_TICKET_GRANTING_TICKET_RESOURCE_RESOLVER", ticketResourceResolver);
+        plan.registerAuditResourceResolver("DESTROY_PROXY_GRANTING_TICKET_RESOURCE_RESOLVER", ticketResourceResolver);
+
+        plan.registerAuditResourceResolver("GRANT_SERVICE_TICKET_RESOURCE_RESOLVER", new ServiceResourceResolver());
+        plan.registerAuditResourceResolver("GRANT_PROXY_TICKET_RESOURCE_RESOLVER", new ServiceResourceResolver());
+        plan.registerAuditResourceResolver("VALIDATE_SERVICE_TICKET_RESOURCE_RESOLVER", ticketValidationResourceResolver());
+
+        plan.registerAuditResourceResolver("SAVE_SERVICE_RESOURCE_RESOLVER", returnValueResourceResolver());
+        plan.registerAuditResourceResolver("AUTHENTICATION_EVENT_RESOURCE_RESOLVER", nullableReturnValueResourceResolver());
+
+        plan.registerAuditResourceResolver("SERVICE_ACCESS_ENFORCEMENT_RESOURCE_RESOLVER", serviceAccessEnforcementAuditResourceResolver());
+
+        /*
+            Add custom resolvers here.
+         */
+        plan.registerAuditActionResolvers(customAuditActionResolverMap());
+        plan.registerAuditResourceResolvers(customAuditResourceResolverMap());
     }
 }

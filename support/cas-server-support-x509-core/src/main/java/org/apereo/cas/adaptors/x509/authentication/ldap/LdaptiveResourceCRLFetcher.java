@@ -3,18 +3,19 @@ package org.apereo.cas.adaptors.x509.authentication.ldap;
 import org.apereo.cas.adaptors.x509.authentication.ResourceCRLFetcher;
 import org.apereo.cas.util.EncodingUtils;
 import org.apereo.cas.util.LdapUtils;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.ldaptive.ConnectionConfig;
 import org.ldaptive.ConnectionFactory;
 import org.ldaptive.DefaultConnectionFactory;
 import org.ldaptive.LdapAttribute;
-import org.ldaptive.LdapEntry;
 import org.ldaptive.LdapException;
 import org.ldaptive.Response;
 import org.ldaptive.ResultCode;
 import org.ldaptive.SearchExecutor;
 import org.ldaptive.SearchResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.Resource;
 
@@ -31,34 +32,21 @@ import java.security.cert.X509CRL;
  * @author Daniel Fisher
  * @since 4.1
  */
+@Slf4j
+@RequiredArgsConstructor
 public class LdaptiveResourceCRLFetcher extends ResourceCRLFetcher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LdaptiveResourceCRLFetcher.class);
-    /**
-     * Search exec that looks for the attribute.
-     */
-    private final SearchExecutor searchExecutor;
 
     /**
      * The connection config to prep for connections.
      **/
     private final ConnectionConfig connectionConfig;
-    
-    private final String certificateAttribute;
 
     /**
-     * Instantiates a new Ldap resource cRL fetcher.
-     *
-     * @param connectionConfig the connection configuration
-     * @param searchExecutor   the search executor
-     * @param attributeName    the attribute name
+     * Search exec that looks for the attribute.
      */
-    public LdaptiveResourceCRLFetcher(final ConnectionConfig connectionConfig, 
-                                      final SearchExecutor searchExecutor,
-                                      final String attributeName) {
-        this.connectionConfig = connectionConfig;
-        this.searchExecutor = searchExecutor;
-        this.certificateAttribute = attributeName;
-    }
+    private final SearchExecutor searchExecutor;
+
+    private final String certificateAttribute;
 
     @Override
     public X509CRL fetch(final Resource crl) throws IOException, CRLException, CertificateException {
@@ -103,13 +91,13 @@ public class LdaptiveResourceCRLFetcher extends ResourceCRLFetcher {
      */
     protected X509CRL fetchCRLFromLdap(final Object r) throws CertificateException, IOException, CRLException {
         try {
-            final String ldapURL = r.toString();
+            val ldapURL = r.toString();
             LOGGER.debug("Fetching CRL from ldap [{}]", ldapURL);
 
-            final Response<SearchResult> result = performLdapSearch(ldapURL);
+            val result = performLdapSearch(ldapURL);
             if (result.getResultCode() == ResultCode.SUCCESS) {
-                final LdapEntry entry = result.getResult().getEntry();
-                final LdapAttribute attribute = entry.getAttribute(this.certificateAttribute);
+                val entry = result.getResult().getEntry();
+                val attribute = entry.getAttribute(this.certificateAttribute);
 
                 if (attribute.isBinary()) {
                     LOGGER.debug("Located entry [{}]. Retrieving first attribute [{}]", entry, attribute);
@@ -140,11 +128,11 @@ public class LdaptiveResourceCRLFetcher extends ResourceCRLFetcher {
      */
     protected X509CRL fetchX509CRLFromAttribute(final LdapAttribute aval) throws CertificateException, IOException, CRLException {
         if (aval != null && aval.isBinary()) {
-            final byte[] val = aval.getBinaryValue();
+            val val = aval.getBinaryValue();
             if (val == null || val.length == 0) {
                 throw new CertificateException("Empty attribute. Can not download CRL from ldap");
             }
-            final byte[] decoded64 = EncodingUtils.decodeBase64(val);
+            val decoded64 = EncodingUtils.decodeBase64(val);
             if (decoded64 == null) {
                 throw new CertificateException("Could not decode the attribute value to base64");
             }
@@ -162,7 +150,7 @@ public class LdaptiveResourceCRLFetcher extends ResourceCRLFetcher {
      * @throws LdapException if an error occurs performing the search
      */
     protected Response<SearchResult> performLdapSearch(final String ldapURL) throws LdapException {
-        final ConnectionFactory connectionFactory = prepareConnectionFactory(ldapURL);
+        val connectionFactory = prepareConnectionFactory(ldapURL);
         return this.searchExecutor.search(connectionFactory);
     }
 
@@ -173,7 +161,7 @@ public class LdaptiveResourceCRLFetcher extends ResourceCRLFetcher {
      * @return connection factory
      */
     protected ConnectionFactory prepareConnectionFactory(final String ldapURL) {
-        final ConnectionConfig cc = ConnectionConfig.newConnectionConfig(this.connectionConfig);
+        val cc = ConnectionConfig.newConnectionConfig(this.connectionConfig);
         cc.setLdapUrl(ldapURL);
         return new DefaultConnectionFactory(cc);
     }

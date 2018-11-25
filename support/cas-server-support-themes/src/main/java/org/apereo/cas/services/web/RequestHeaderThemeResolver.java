@@ -1,5 +1,6 @@
 package org.apereo.cas.services.web;
 
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.servlet.theme.AbstractThemeResolver;
 
@@ -15,7 +16,7 @@ import javax.servlet.http.HttpServletResponse;
 public class RequestHeaderThemeResolver extends AbstractThemeResolver {
     @Override
     public String resolveThemeName(final HttpServletRequest request) {
-        final String theme = request.getHeader("theme");
+        val theme = request.getHeader("theme");
         return StringUtils.defaultIfBlank(theme, getDefaultThemeName());
     }
 

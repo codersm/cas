@@ -2,15 +2,15 @@ package org.apereo.cas.adaptors.ldap.services.config;
 
 import org.apereo.cas.adaptors.ldap.services.DefaultLdapRegisteredServiceMapper;
 import org.apereo.cas.adaptors.ldap.services.LdapRegisteredServiceMapper;
-import org.apereo.cas.adaptors.ldap.services.LdapServiceRegistryDao;
+import org.apereo.cas.adaptors.ldap.services.LdapServiceRegistry;
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.configuration.model.support.ldap.serviceregistry.LdapServiceRegistryProperties;
-
-import org.apereo.cas.services.ServiceRegistryDao;
+import org.apereo.cas.services.ServiceRegistry;
+import org.apereo.cas.services.ServiceRegistryExecutionPlan;
+import org.apereo.cas.services.ServiceRegistryExecutionPlanConfigurer;
 import org.apereo.cas.util.LdapUtils;
-import org.ldaptive.ConnectionFactory;
+
+import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -39,10 +39,20 @@ public class LdapServiceRegistryConfiguration {
 
     @Bean
     @RefreshScope
-    @Autowired
-    public ServiceRegistryDao serviceRegistryDao(@Qualifier("ldapServiceRegistryMapper") final LdapRegisteredServiceMapper mapper) {
-        final LdapServiceRegistryProperties ldap = casProperties.getServiceRegistry().getLdap();
-        final ConnectionFactory connectionFactory = LdapUtils.newLdaptivePooledConnectionFactory(ldap);
-        return new LdapServiceRegistryDao(connectionFactory, ldap.getBaseDn(), mapper, ldap);
+    public ServiceRegistry ldapServiceRegistry() {
+        val ldap = casProperties.getServiceRegistry().getLdap();
+        val connectionFactory = LdapUtils.newLdaptivePooledConnectionFactory(ldap);
+        return new LdapServiceRegistry(connectionFactory, ldap.getBaseDn(), ldapServiceRegistryMapper(), ldap);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "ldapServiceRegistryExecutionPlanConfigurer")
+    public ServiceRegistryExecutionPlanConfigurer ldaplServiceRegistryExecutionPlanConfigurer() {
+        return new ServiceRegistryExecutionPlanConfigurer() {
+            @Override
+            public void configureServiceRegistry(final ServiceRegistryExecutionPlan plan) {
+                plan.registerServiceRegistry(ldapServiceRegistry());
+            }
+        };
     }
 }

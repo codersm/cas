@@ -1,7 +1,8 @@
 package org.apereo.cas;
 
-import org.apereo.cas.adaptors.gauth.GoogleAuthenticatorMongoDbTokenCredentialRepositoryTests;
-import org.apereo.cas.adaptors.gauth.GoogleAuthenticatorMongoDbTokenRepositoryTests;
+import org.apereo.cas.gauth.credential.MongoDbGoogleAuthenticatorTokenCredentialRepositoryTests;
+import org.apereo.cas.gauth.token.GoogleAuthenticatorMongoDbTokenRepositoryTests;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -12,7 +13,7 @@ import org.junit.runners.Suite;
  * @since 5.2.0
  */
 @RunWith(Suite.class)
-@Suite.SuiteClasses({GoogleAuthenticatorMongoDbTokenCredentialRepositoryTests.class,
-        GoogleAuthenticatorMongoDbTokenRepositoryTests.class})
+@Suite.SuiteClasses({MongoDbGoogleAuthenticatorTokenCredentialRepositoryTests.class,
+    GoogleAuthenticatorMongoDbTokenRepositoryTests.class})
 public class AllTestsSuite {
 }

@@ -1,18 +1,19 @@
 package org.apereo.cas.adaptors.jdbc;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.PreventedException;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.dao.DataAccessException;
 
 import javax.security.auth.login.FailedLoginException;
 import javax.sql.DataSource;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 
 /**
  * Class that given a table, username field and password field will query a
@@ -25,10 +26,9 @@ import java.security.GeneralSecurityException;
  * @author Marvin S. Addison
  * @since 3.0.0
  */
+@Slf4j
 public class SearchModeSearchDatabaseAuthenticationHandler extends AbstractJdbcUsernamePasswordAuthenticationHandler {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SearchModeSearchDatabaseAuthenticationHandler.class);
-    
     private final String fieldUser;
     private final String fieldPassword;
     private final String tableUsers;
@@ -43,29 +43,22 @@ public class SearchModeSearchDatabaseAuthenticationHandler extends AbstractJdbcU
     }
 
     @Override
-    protected HandlerResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential credential, final String originalPassword)
-            throws GeneralSecurityException, PreventedException {
+    protected AuthenticationHandlerExecutionResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential credential,
+                                                                                        final String originalPassword)
+        throws GeneralSecurityException, PreventedException {
 
-        String sql = null;
-        if (StringUtils.isNotBlank(tableUsers) || StringUtils.isNotBlank(fieldUser) || StringUtils.isNotBlank(fieldPassword)) {
-            sql = "SELECT COUNT('x') FROM ".concat(this.tableUsers).concat(" WHERE ").concat(this.fieldUser)
-                    .concat(" = ? AND ").concat(this.fieldPassword).concat("= ?");
-        }
+        val sql = "SELECT COUNT('x') FROM ".concat(this.tableUsers).concat(" WHERE ").concat(this.fieldUser)
+            .concat(" = ? AND ").concat(this.fieldPassword).concat("= ?");
 
-        if (StringUtils.isBlank(sql) || getJdbcTemplate() == null) {
-            throw new GeneralSecurityException("Authentication handler is not configured correctly. "
-                    + "No SQL statement or JDBC template found");
-        }
-
-        final String username = credential.getUsername();
+        val username = credential.getUsername();
         try {
             LOGGER.debug("Executing SQL query [{}]", sql);
 
-            final int count = getJdbcTemplate().queryForObject(sql, Integer.class, username, credential.getPassword());
+            val count = getJdbcTemplate().queryForObject(sql, Integer.class, username, credential.getPassword());
             if (count == 0) {
                 throw new FailedLoginException(username + " not found with SQL query.");
             }
-            return createHandlerResult(credential, this.principalFactory.createPrincipal(username), null);
+            return createHandlerResult(credential, this.principalFactory.createPrincipal(username), new ArrayList<>(0));
         } catch (final DataAccessException e) {
             throw new PreventedException("SQL exception while executing query for " + username, e);
         }

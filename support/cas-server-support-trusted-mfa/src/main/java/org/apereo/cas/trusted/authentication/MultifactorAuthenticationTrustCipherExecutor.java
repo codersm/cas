@@ -2,6 +2,7 @@ package org.apereo.cas.trusted.authentication;
 
 import org.apereo.cas.util.cipher.BaseStringCipherExecutor;
 
+
 /**
  * This is {@link MultifactorAuthenticationTrustCipherExecutor}.
  *
@@ -11,8 +12,10 @@ import org.apereo.cas.util.cipher.BaseStringCipherExecutor;
 public class MultifactorAuthenticationTrustCipherExecutor extends BaseStringCipherExecutor {
     public MultifactorAuthenticationTrustCipherExecutor(final String secretKeyEncryption,
                                                         final String secretKeySigning,
-                                                        final String alg) {
-        super(secretKeyEncryption, secretKeySigning, alg);
+                                                        final String alg,
+                                                        final int signingKeySize,
+                                                        final int encryptionKeySize) {
+        super(secretKeyEncryption, secretKeySigning, alg, signingKeySize, encryptionKeySize);
     }
 
     @Override
@@ -22,11 +25,11 @@ public class MultifactorAuthenticationTrustCipherExecutor extends BaseStringCiph
 
     @Override
     protected String getEncryptionKeySetting() {
-        return "cas.authn.mfa.trusted.encryption.key";
+        return "cas.authn.mfa.trusted.crypto.encryption.key";
     }
 
     @Override
     protected String getSigningKeySetting() {
-        return "cas.authn.mfa.trusted.signing.key";
+        return "cas.authn.mfa.trusted.crypto.signing.key";
     }
 }

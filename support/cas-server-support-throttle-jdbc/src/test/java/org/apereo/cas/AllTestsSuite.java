@@ -1,6 +1,7 @@
 package org.apereo.cas;
 
-import org.apereo.cas.web.support.InspektrThrottledSubmissionByIpAddressAndUsernameHandlerInterceptorAdapterTests;
+import org.apereo.cas.web.support.JdbcThrottledSubmissionHandlerInterceptorAdapterTests;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
@@ -12,7 +13,7 @@ import org.junit.runners.Suite;
  */
 @RunWith(Suite.class)
 @Suite.SuiteClasses(
-        InspektrThrottledSubmissionByIpAddressAndUsernameHandlerInterceptorAdapterTests.class
+    JdbcThrottledSubmissionHandlerInterceptorAdapterTests.class
 )
 public class AllTestsSuite {
 }

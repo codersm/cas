@@ -1,12 +1,10 @@
 package org.apereo.cas.ticket.accesstoken;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
-import org.apereo.cas.ticket.ExpirationPolicy;
-import org.junit.Test;
+import org.apereo.cas.ticket.BaseOAuthExpirationPolicyTests;
 
-import java.io.File;
-import java.io.IOException;
+import lombok.val;
+import org.junit.Test;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.Assert.*;
 
@@ -14,16 +12,23 @@ import static org.junit.Assert.*;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-public class OAuthAccessTokenExpirationPolicyTests {
+@TestPropertySource(properties = "cas.logout.removeDescendantTickets=true")
+public class OAuthAccessTokenExpirationPolicyTests extends BaseOAuthExpirationPolicyTests {
+    @Test
+    public void verifyAccessTokenExpiryWhenTgtIsExpired() {
+        val tgt = newTicketGrantingTicket();
+        val at = newAccessToken(tgt);
 
-    private static final File JSON_FILE = new File(FileUtils.getTempDirectoryPath(), "oAuthAccessTokenExpirationPolicy.json");
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+        assertFalse("Access token should not be expired", at.isExpired());
+        tgt.markTicketExpired();
+        assertTrue("Access token should not be expired when TGT is expired", at.isExpired());
+    }
 
     @Test
-    public void verifySerializeAnOAuthAccessTokenExpirationPolicyToJson() throws IOException {
-        final OAuthAccessTokenExpirationPolicy policyWritten = new OAuthAccessTokenExpirationPolicy(1234L, 5678L);
+    public void verifySerializeAnOAuthAccessTokenExpirationPolicyToJson() throws Exception {
+        val policyWritten = new OAuthAccessTokenExpirationPolicy(1234L, 5678L);
         MAPPER.writeValue(JSON_FILE, policyWritten);
-        final ExpirationPolicy policyRead = MAPPER.readValue(JSON_FILE, OAuthAccessTokenExpirationPolicy.class);
+        val policyRead = MAPPER.readValue(JSON_FILE, OAuthAccessTokenExpirationPolicy.class);
         assertEquals(policyWritten, policyRead);
     }
 }

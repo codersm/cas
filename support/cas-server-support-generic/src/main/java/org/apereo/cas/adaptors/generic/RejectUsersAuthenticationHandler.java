@@ -1,13 +1,16 @@
 package org.apereo.cas.adaptors.generic;
 
-import org.apereo.cas.authentication.HandlerResult;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.handler.support.AbstractUsernamePasswordAuthenticationHandler;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
 
+import lombok.val;
+
 import javax.security.auth.login.FailedLoginException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Set;
 
 /**
@@ -24,7 +27,7 @@ import java.util.Set;
  * @since 3.0.0
  */
 public class RejectUsersAuthenticationHandler extends AbstractUsernamePasswordAuthenticationHandler {
-    
+
     /**
      * The collection of users to reject.
      */
@@ -37,14 +40,14 @@ public class RejectUsersAuthenticationHandler extends AbstractUsernamePasswordAu
     }
 
     @Override
-    protected HandlerResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential credential, final String originalPassword)
-            throws GeneralSecurityException {
+    protected AuthenticationHandlerExecutionResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential credential,
+                                                                                        final String originalPassword) throws GeneralSecurityException {
 
-        final String username = credential.getUsername();
+        val username = credential.getUsername();
         if (this.users.contains(username)) {
             throw new FailedLoginException();
         }
 
-        return createHandlerResult(credential, this.principalFactory.createPrincipal(username), null);
+        return createHandlerResult(credential, this.principalFactory.createPrincipal(username), new ArrayList<>(0));
     }
 }

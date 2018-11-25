@@ -1,7 +1,13 @@
 package org.apereo.cas.support.saml.mdui;
 
-import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import org.apereo.cas.support.saml.OpenSamlConfigBean;
+
+import lombok.Setter;
+import lombok.SneakyThrows;
+import lombok.Synchronized;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
 import org.opensaml.core.criterion.EntityIdCriterion;
 import org.opensaml.saml.metadata.resolver.ChainingMetadataResolver;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
@@ -9,11 +15,8 @@ import org.opensaml.saml.metadata.resolver.filter.MetadataFilter;
 import org.opensaml.saml.metadata.resolver.filter.MetadataFilterChain;
 import org.opensaml.saml.metadata.resolver.impl.DOMMetadataResolver;
 import org.opensaml.saml.saml2.metadata.EntityDescriptor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.w3c.dom.Document;
-import org.w3c.dom.Element;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -22,7 +25,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * This is {@link AbstractMetadataResolverAdapter} that encapsulates
@@ -31,8 +33,9 @@ import java.util.Set;
  * @author Misagh Moayyed
  * @since 4.1.0
  */
+@Slf4j
+@Setter
 public abstract class AbstractMetadataResolverAdapter implements MetadataResolverAdapter {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractMetadataResolverAdapter.class);
 
     /**
      * Metadata resources along with filters to perform validation.
@@ -51,8 +54,6 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
 
     private ChainingMetadataResolver metadataResolver;
 
-    private final Object lock = new Object();
-
     /**
      * Instantiates a new abstract metadata resolver adapter.
      */
@@ -67,10 +68,6 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
      */
     public AbstractMetadataResolverAdapter(final Map<Resource, MetadataFilterChain> metadataResources) {
         this.metadataResources = metadataResources;
-    }
-
-    public void setRequireValidMetadata(final boolean requireValidMetadata) {
-        this.requireValidMetadata = requireValidMetadata;
     }
 
     /**
@@ -90,17 +87,13 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
     }
 
     @Override
+    @SneakyThrows
     public EntityDescriptor getEntityDescriptorForEntityId(final String entityId) {
-        try {
-            final CriteriaSet criterions = new CriteriaSet(new EntityIdCriterion(entityId));
-            if (this.metadataResolver != null) {
-                return this.metadataResolver.resolveSingle(criterions);
-            }
-        } catch (final Exception ex) {
-            throw new RuntimeException(ex.getMessage(), ex);
+        val criterions = new CriteriaSet(new EntityIdCriterion(entityId));
+        if (this.metadataResolver != null) {
+            return this.metadataResolver.resolveSingle(criterions);
         }
         return null;
-
     }
 
     /**
@@ -116,30 +109,23 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
      *
      * @param entityId the entity id
      */
+    @Synchronized
+    @SneakyThrows
     public void buildMetadataResolverAggregate(final String entityId) {
-        try {
-            LOGGER.debug("Building metadata resolver aggregate");
-
-            this.metadataResolver = new ChainingMetadataResolver();
-            final List<MetadataResolver> resolvers = new ArrayList<>();
-
-            final Set<Map.Entry<Resource, MetadataFilterChain>> entries = this.metadataResources.entrySet();
-            entries.forEach(entry -> {
-                final Resource resource = entry.getKey();
-                LOGGER.debug("Loading [{}]", resource.getFilename());
-                resolvers.addAll(loadMetadataFromResource(entry.getValue(), resource, entityId));
-            });
-
-            synchronized (this.lock) {
-                this.metadataResolver.setId(ChainingMetadataResolver.class.getCanonicalName());
-                this.metadataResolver.setResolvers(resolvers);
-                LOGGER.info("Collected metadata from [{}] resolvers(s). Initializing aggregate resolver...", resolvers.size());
-                this.metadataResolver.initialize();
-                LOGGER.info("Metadata aggregate initialized successfully.");
-            }
-        } catch (final Exception ex) {
-            throw new RuntimeException(ex.getMessage(), ex);
-        }
+        LOGGER.debug("Building metadata resolver aggregate");
+        this.metadataResolver = new ChainingMetadataResolver();
+        val resolvers = new ArrayList<MetadataResolver>();
+        val entries = this.metadataResources.entrySet();
+        entries.forEach(entry -> {
+            val resource = entry.getKey();
+            LOGGER.debug("Loading [{}]", resource.getFilename());
+            resolvers.addAll(loadMetadataFromResource(entry.getValue(), resource, entityId));
+        });
+        this.metadataResolver.setId(ChainingMetadataResolver.class.getCanonicalName());
+        this.metadataResolver.setResolvers(resolvers);
+        LOGGER.info("Collected metadata from [{}] resolvers(s). Initializing aggregate resolver...", resolvers.size());
+        this.metadataResolver.initialize();
+        LOGGER.info("Metadata aggregate initialized successfully.");
     }
 
     /**
@@ -150,13 +136,12 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
      * @param entityId       the entity id
      * @return the list
      */
-    private List<MetadataResolver> loadMetadataFromResource(final MetadataFilter metadataFilter,
-                                                            final Resource resource, final String entityId) {
+    private List<MetadataResolver> loadMetadataFromResource(final MetadataFilter metadataFilter, final Resource resource, final String entityId) {
         LOGGER.debug("Evaluating metadata resource [{}]", resource.getFilename());
-        try (InputStream in = getResourceInputStream(resource, entityId)) {
+        try (val in = getResourceInputStream(resource, entityId)) {
             if (in.available() > 0 && in.markSupported()) {
                 LOGGER.debug("Parsing [{}]", resource.getFilename());
-                final Document document = this.configBean.getParserPool().parse(in);
+                val document = this.configBean.getParserPool().parse(in);
                 return buildSingleMetadataResolver(metadataFilter, resource, document);
             }
             LOGGER.warn("Input stream from resource [{}] appears empty. Moving on...", resource.getFilename());
@@ -174,12 +159,10 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
      * @param document            the xml document to parse
      * @return list of resolved metadata from resources.
      */
-    private List<MetadataResolver> buildSingleMetadataResolver(final MetadataFilter metadataFilterChain,
-                                                               final Resource resource, final Document document) {
+    private List<MetadataResolver> buildSingleMetadataResolver(final MetadataFilter metadataFilterChain, final Resource resource, final Document document) {
         try {
-            final Element metadataRoot = document.getDocumentElement();
-            final DOMMetadataResolver metadataProvider = new DOMMetadataResolver(metadataRoot);
-
+            val metadataRoot = document.getDocumentElement();
+            val metadataProvider = new DOMMetadataResolver(metadataRoot);
             metadataProvider.setParserPool(this.configBean.getParserPool());
             metadataProvider.setFailFastInitialization(true);
             metadataProvider.setRequireValidMetadata(this.requireValidMetadata);
@@ -189,21 +172,12 @@ public abstract class AbstractMetadataResolverAdapter implements MetadataResolve
             }
             LOGGER.debug("Initializing metadata resolver for [{}]", resource);
             metadataProvider.initialize();
-
-            final List<MetadataResolver> resolvers = new ArrayList<>();
+            val resolvers = new ArrayList<MetadataResolver>();
             resolvers.add(metadataProvider);
             return resolvers;
         } catch (final Exception ex) {
             LOGGER.warn("Could not initialize metadata resolver. Resource will be ignored", ex);
         }
         return new ArrayList<>(0);
-    }
-
-    public void setMetadataResources(final Map<Resource, MetadataFilterChain> metadataResources) {
-        this.metadataResources = metadataResources;
-    }
-
-    public void setConfigBean(final OpenSamlConfigBean configBean) {
-        this.configBean = configBean;
     }
 }

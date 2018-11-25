@@ -7,8 +7,8 @@ import org.apereo.cas.api.AuthenticationRiskScore;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.services.RegisteredService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 
@@ -22,15 +22,14 @@ import java.util.Set;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
 public abstract class BaseAuthenticationRiskContingencyPlan implements AuthenticationRiskContingencyPlan {
-    private static final Logger LOGGER = LoggerFactory.getLogger(BaseAuthenticationRiskContingencyPlan.class);
-    
+
     /**
      * CAS properties.
      */
     @Autowired
     protected CasConfigurationProperties casProperties;
-
     /**
      * App context.
      */
@@ -38,7 +37,6 @@ public abstract class BaseAuthenticationRiskContingencyPlan implements Authentic
     protected ApplicationContext applicationContext;
 
     private final Set<AuthenticationRiskNotifier> notifiers = new LinkedHashSet<>();
-
 
     @Override
     public final AuthenticationRiskContingencyResponse execute(final Authentication authentication,
@@ -56,11 +54,11 @@ public abstract class BaseAuthenticationRiskContingencyPlan implements Authentic
         });
         return executeInternal(authentication, service, score, request);
     }
-    
+
     public Set<AuthenticationRiskNotifier> getNotifiers() {
         return notifiers;
     }
-    
+
     /**
      * Execute authentication risk contingency plan.
      *

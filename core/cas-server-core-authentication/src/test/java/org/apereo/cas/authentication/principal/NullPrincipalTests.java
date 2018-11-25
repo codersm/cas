@@ -1,6 +1,7 @@
 package org.apereo.cas.authentication.principal;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -21,9 +22,9 @@ public class NullPrincipalTests {
 
     @Test
     public void verifySerializeANullPrincipalToJson() throws IOException {
-        final NullPrincipal serviceWritten = NullPrincipal.getInstance();
+        val serviceWritten = NullPrincipal.getInstance();
         MAPPER.writeValue(JSON_FILE, serviceWritten);
-        final NullPrincipal serviceRead = MAPPER.readValue(JSON_FILE, NullPrincipal.class);
+        val serviceRead = MAPPER.readValue(JSON_FILE, NullPrincipal.class);
         assertEquals(serviceWritten, serviceRead);
     }
 }

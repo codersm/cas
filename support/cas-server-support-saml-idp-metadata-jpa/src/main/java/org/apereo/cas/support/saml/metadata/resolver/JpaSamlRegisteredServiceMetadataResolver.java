@@ -1,13 +1,16 @@
 package org.apereo.cas.support.saml.metadata.resolver;
 
 import org.apereo.cas.configuration.model.support.saml.idp.SamlIdPProperties;
+import org.apereo.cas.configuration.support.JpaBeans;
 import org.apereo.cas.support.saml.OpenSamlConfigBean;
 import org.apereo.cas.support.saml.services.SamlRegisteredService;
 import org.apereo.cas.support.saml.services.idp.metadata.SamlMetadataDocument;
 import org.apereo.cas.support.saml.services.idp.metadata.cache.resolver.BaseSamlRegisteredServiceMetadataResolver;
+
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,35 +29,25 @@ import java.util.stream.Collectors;
  */
 @EnableTransactionManagement(proxyTargetClass = true)
 @Transactional(transactionManager = "transactionManagerSamlMetadata")
+@Slf4j
+@ToString
 public class JpaSamlRegisteredServiceMetadataResolver extends BaseSamlRegisteredServiceMetadataResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JpaSamlRegisteredServiceMetadataResolver.class);
+    private static final int DATA_SOURCE_VALIDITY_TIMEOUT_SECONDS = 5;
 
-    private static final String SELECT_QUERY = "SELECT r from SamlMetadataDocument r ";
+    private static final String SELECT_QUERY = String.format("SELECT r from %s r ", SamlMetadataDocument.class.getSimpleName());
 
     @PersistenceContext(unitName = "samlMetadataEntityManagerFactory")
-    private EntityManager entityManager;
-    
-    public JpaSamlRegisteredServiceMetadataResolver(final SamlIdPProperties samlIdPProperties,
-                                                    final OpenSamlConfigBean configBean) {
+    private transient EntityManager entityManager;
+
+    public JpaSamlRegisteredServiceMetadataResolver(final SamlIdPProperties samlIdPProperties, final OpenSamlConfigBean configBean) {
         super(samlIdPProperties, configBean);
     }
 
     @Override
-    public String toString() {
-        return getClass().getSimpleName();
-    }
-    
-    @Override
-    public Collection<MetadataResolver> resolve(final SamlRegisteredService service) {
+    public Collection<? extends MetadataResolver> resolve(final SamlRegisteredService service) {
         try {
-            final Collection<SamlMetadataDocument> documents = this.entityManager.createQuery(
-                SELECT_QUERY, SamlMetadataDocument.class)
-                .getResultList();
-            return documents
-                .stream()
-                .map(doc -> buildMetadataResolverFrom(service, doc))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toList());
+            val documents = this.entityManager.createQuery(SELECT_QUERY, SamlMetadataDocument.class).getResultList();
+            return documents.stream().map(doc -> buildMetadataResolverFrom(service, doc)).filter(Objects::nonNull).collect(Collectors.toList());
         } catch (final NoResultException e) {
             LOGGER.debug(e.getMessage());
         } catch (final Exception e) {
@@ -66,7 +59,7 @@ public class JpaSamlRegisteredServiceMetadataResolver extends BaseSamlRegistered
     @Override
     public boolean supports(final SamlRegisteredService service) {
         try {
-            final String metadataLocation = service.getMetadataLocation();
+            val metadataLocation = service.getMetadataLocation();
             return metadataLocation.trim().startsWith("jdbc://");
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
@@ -81,5 +74,18 @@ public class JpaSamlRegisteredServiceMetadataResolver extends BaseSamlRegistered
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
+    }
+
+    @Override
+    public boolean isAvailable(final SamlRegisteredService service) {
+        if (supports(service)) {
+            val ds = JpaBeans.newDataSource(samlIdPProperties.getMetadata().getJpa());
+            try (val con = ds.getConnection()) {
+                return con.isValid(DATA_SOURCE_VALIDITY_TIMEOUT_SECONDS);
+            } catch (final Exception e) {
+                LOGGER.error(e.getMessage(), e);
+            }
+        }
+        return false;
     }
 }

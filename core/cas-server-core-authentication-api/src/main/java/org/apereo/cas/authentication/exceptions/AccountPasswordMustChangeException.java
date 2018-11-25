@@ -1,5 +1,7 @@
 package org.apereo.cas.authentication.exceptions;
 
+import lombok.NoArgsConstructor;
+
 import javax.security.auth.login.CredentialExpiredException;
 
 /**
@@ -8,16 +10,13 @@ import javax.security.auth.login.CredentialExpiredException;
  * @author Misagh Moayyed
  * @since 4.0.0
  */
+@NoArgsConstructor
 public class AccountPasswordMustChangeException extends CredentialExpiredException {
 
-    /** Serialization metadata. */
-    private static final long serialVersionUID = 7487835035108753209L;
-
     /**
-     * Instantiates a new account password must change exception.
+     * Serialization metadata.
      */
-    public AccountPasswordMustChangeException() {
-    }
+    private static final long serialVersionUID = 7487835035108753209L;
 
     /**
      * Instantiates a new account password must change exception.
@@ -27,5 +26,4 @@ public class AccountPasswordMustChangeException extends CredentialExpiredExcepti
     public AccountPasswordMustChangeException(final String msg) {
         super(msg);
     }
-
 }

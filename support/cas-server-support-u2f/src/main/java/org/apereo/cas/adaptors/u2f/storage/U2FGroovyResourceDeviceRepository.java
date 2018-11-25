@@ -1,9 +1,9 @@
 package org.apereo.cas.adaptors.u2f.storage;
 
-import com.github.benmanes.caffeine.cache.LoadingCache;
 import org.apereo.cas.util.ScriptingUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.github.benmanes.caffeine.cache.LoadingCache;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.Resource;
 
 import java.util.List;
@@ -16,9 +16,8 @@ import java.util.concurrent.TimeUnit;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
 public class U2FGroovyResourceDeviceRepository extends BaseResourceU2FDeviceRepository {
-    private static final Logger LOGGER = LoggerFactory.getLogger(U2FGroovyResourceDeviceRepository.class);
-
     private final Resource groovyScript;
 
     public U2FGroovyResourceDeviceRepository(final LoadingCache<String, String> requestStorage,
@@ -29,12 +28,12 @@ public class U2FGroovyResourceDeviceRepository extends BaseResourceU2FDeviceRepo
 
     @Override
     public Map<String, List<U2FDeviceRegistration>> readDevicesFromResource() {
-        return ScriptingUtils.executeGroovyScript(this.groovyScript, "read", new Object[]{LOGGER}, Map.class);
+        return ScriptingUtils.executeGroovyScript(this.groovyScript, "read", new Object[]{LOGGER}, Map.class, true);
     }
 
     @Override
     public void writeDevicesBackToResource(final List<U2FDeviceRegistration> list) {
-        ScriptingUtils.executeGroovyScript(this.groovyScript, "write", new Object[]{list, LOGGER}, Boolean.class);
+        ScriptingUtils.executeGroovyScript(this.groovyScript, "write", new Object[]{list, LOGGER}, Boolean.class, true);
         LOGGER.debug("Saved [{}] device(s) into repository [{}]", list.size(), groovyScript);
     }
 }

@@ -7,8 +7,10 @@ import org.apereo.cas.authentication.principal.ServiceFactory;
 import org.apereo.cas.authentication.principal.WebApplicationService;
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.services.ServicesManager;
+import org.apereo.cas.support.oauth.services.OAuth20AuthenticationServiceSelectionStrategy;
 import org.apereo.cas.support.oauth.util.OAuth20Utils;
-import org.apereo.cas.support.oauth.validator.OAuth20AuthenticationServiceSelectionStrategy;
+
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -26,13 +28,13 @@ import org.springframework.context.annotation.Configuration;
 @Configuration("casOAuthAuthenticationServiceSelectionStrategyConfiguration")
 @EnableConfigurationProperties(CasConfigurationProperties.class)
 public class CasOAuthAuthenticationServiceSelectionStrategyConfiguration implements AuthenticationServiceSelectionStrategyConfigurer {
-    
+
     @Autowired
     private CasConfigurationProperties casProperties;
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
     @Autowired
     @Qualifier("webApplicationServiceFactory")
@@ -42,10 +44,10 @@ public class CasOAuthAuthenticationServiceSelectionStrategyConfiguration impleme
     @ConditionalOnMissingBean(name = "oauth20AuthenticationRequestServiceSelectionStrategy")
     @RefreshScope
     public AuthenticationServiceSelectionStrategy oauth20AuthenticationRequestServiceSelectionStrategy() {
-        return new OAuth20AuthenticationServiceSelectionStrategy(servicesManager,
-                webApplicationServiceFactory, OAuth20Utils.casOAuthCallbackUrl(casProperties.getServer().getPrefix()));
+        return new OAuth20AuthenticationServiceSelectionStrategy(servicesManager.getIfAvailable(),
+            webApplicationServiceFactory, OAuth20Utils.casOAuthCallbackUrl(casProperties.getServer().getPrefix()));
     }
-    
+
     @Override
     public void configureAuthenticationServiceSelectionStrategy(final AuthenticationServiceSelectionPlan plan) {
         plan.registerStrategy(oauth20AuthenticationRequestServiceSelectionStrategy());

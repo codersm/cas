@@ -1,19 +1,22 @@
 package org.apereo.cas.authentication.handler.support;
 
 import org.apereo.cas.authentication.AbstractAuthenticationHandler;
-import org.apereo.cas.authentication.BasicCredentialMetaData;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.Credential;
-import org.apereo.cas.authentication.DefaultHandlerResult;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.DefaultAuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.MessageDescriptor;
 import org.apereo.cas.authentication.PrePostAuthenticationHandler;
 import org.apereo.cas.authentication.PreventedException;
+import org.apereo.cas.authentication.metadata.BasicCredentialMetaData;
 import org.apereo.cas.authentication.principal.Principal;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
 
+import lombok.NonNull;
+
 import javax.security.auth.login.FailedLoginException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -33,7 +36,7 @@ public abstract class AbstractPreAndPostProcessingAuthenticationHandler extends 
     }
 
     @Override
-    public HandlerResult authenticate(final Credential credential) throws GeneralSecurityException, PreventedException {
+    public AuthenticationHandlerExecutionResult authenticate(final Credential credential) throws GeneralSecurityException, PreventedException {
         if (!preAuthenticate(credential)) {
             throw new FailedLoginException();
         }
@@ -49,7 +52,7 @@ public abstract class AbstractPreAndPostProcessingAuthenticationHandler extends 
      *                                  {@link #authenticate(Credential)}.
      * @throws PreventedException       On the indeterminate case when authentication is prevented.
      */
-    protected abstract HandlerResult doAuthentication(Credential credential) throws GeneralSecurityException, PreventedException;
+    protected abstract AuthenticationHandlerExecutionResult doAuthentication(Credential credential) throws GeneralSecurityException, PreventedException;
 
     /**
      * Helper method to construct a handler result
@@ -62,7 +65,25 @@ public abstract class AbstractPreAndPostProcessingAuthenticationHandler extends 
      * @param warnings   the warnings
      * @return the constructed handler result
      */
-    protected HandlerResult createHandlerResult(final Credential credential, final Principal principal, final List<MessageDescriptor> warnings) {
-        return new DefaultHandlerResult(this, new BasicCredentialMetaData(credential), principal, warnings);
+    protected AuthenticationHandlerExecutionResult createHandlerResult(final @NonNull Credential credential,
+                                                                       final @NonNull Principal principal,
+                                                                       final List<MessageDescriptor> warnings) {
+        return new DefaultAuthenticationHandlerExecutionResult(this, new BasicCredentialMetaData(credential), principal, warnings);
+    }
+
+    /**
+     * Helper method to construct a handler result
+     * on successful authentication events.
+     *
+     * @param credential the credential on which the authentication was successfully performed.
+     *                   Note that this credential instance may be different from what was originally provided
+     *                   as transformation of the username may have occurred, if one is in fact defined.
+     * @param principal  the resolved principal
+     * @return the constructed handler result
+     */
+    protected AuthenticationHandlerExecutionResult createHandlerResult(final @NonNull Credential credential,
+                                                                       final @NonNull Principal principal) {
+        return new DefaultAuthenticationHandlerExecutionResult(this, new BasicCredentialMetaData(credential),
+            principal, new ArrayList<>(0));
     }
 }

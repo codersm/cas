@@ -1,9 +1,16 @@
 package org.apereo.cas.support.events.dao;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apereo.cas.authentication.adaptive.geo.GeoLocationRequest;
 import org.apereo.cas.util.DateTimeUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.CollectionTable;
@@ -30,27 +37,36 @@ import java.util.Map;
  */
 @Entity
 @Table(name = "CasEvent")
+@ToString
+@Getter
+@Setter
+@AllArgsConstructor
 public class CasEvent {
 
     @org.springframework.data.annotation.Id
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     @GenericGenerator(name = "native", strategy = "native")
+    @JsonProperty("id")
     private long id = -1;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @JsonProperty("type")
+    @Column(nullable = false)
     private String type;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @JsonProperty("principalId")
+    @Column(nullable = false)
     private String principalId;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @JsonProperty("creationTime")
+    @Column(nullable = false)
     private String creationTime;
-    
+
+    @JsonProperty("properties")
     @ElementCollection
     @MapKeyColumn(name = "name")
     @Column(name = "value")
-    @CollectionTable(name = "events_properties", joinColumns = @JoinColumn(name = "id"))
+    @CollectionTable(name = "events_properties", joinColumns = @JoinColumn(name = "eventId"))
     private Map<String, String> properties = new HashMap<>();
 
     /**
@@ -59,19 +75,7 @@ public class CasEvent {
     public CasEvent() {
         this.id = System.currentTimeMillis();
     }
-    
-    public void setType(final String type) {
-        this.type = type;
-    }
 
-    public void setProperties(final Map<String, String> properties) {
-        this.properties = properties;
-    }
-
-    public String getType() {
-        return this.type;
-    }
-    
     /**
      * Gets creation time. Attempts to parse the value
      * as a {@link ZonedDateTime}. Otherwise, assumes a
@@ -80,26 +84,14 @@ public class CasEvent {
      *
      * @return the creation time
      */
-    public ZonedDateTime getCreationTime() {
-        final ZonedDateTime dt = DateTimeUtils.zonedDateTimeOf(this.creationTime);
+    @JsonIgnore
+    public ZonedDateTime getCreationZonedDateTime() {
+        val dt = DateTimeUtils.zonedDateTimeOf(this.creationTime);
         if (dt != null) {
             return dt;
         }
-        final LocalDateTime lt = DateTimeUtils.localDateTimeOf(this.creationTime);
+        val lt = DateTimeUtils.localDateTimeOf(this.creationTime);
         return DateTimeUtils.zonedDateTimeOf(lt.atZone(ZoneId.systemDefault()));
-    }
-
-    public Map<String, String> getProperties() {
-        return this.properties;
-    }
-
-    /**
-     * Set creation time.
-     *
-     * @param time the time
-     */
-    public void setCreationTime(final Object time) {
-        this.creationTime = time.toString();
     }
 
     /**
@@ -114,14 +106,10 @@ public class CasEvent {
     /**
      * Put id.
      *
-     * @param id the id
+     * @param eventId the id
      */
-    public void putId(final String id) {
-        put("id", id);
-    }
-
-    public void setId(final long id) {
-        this.id = id;
+    public void putEventId(final String eventId) {
+        put("eventId", eventId);
     }
 
     /**
@@ -151,22 +139,27 @@ public class CasEvent {
         put("agent", dev);
     }
 
+    @JsonIgnore
     public Long getTimestamp() {
         return Long.valueOf(get("timestamp"));
     }
 
+    @JsonIgnore
     public String getAgent() {
         return get("agent");
     }
 
-    public String getId() {
-        return get("id");
+    @JsonIgnore
+    public String getEventId() {
+        return get("eventId");
     }
 
+    @JsonIgnore
     public String getClientIpAddress() {
         return get("clientip");
     }
 
+    @JsonIgnore
     public String getServerIpAddress() {
         return get("serverip");
     }
@@ -193,22 +186,6 @@ public class CasEvent {
      */
     public String get(final String key) {
         return this.properties.get(key);
-    }
-
-    public String getPrincipalId() {
-        return this.principalId;
-    }
-
-    public void setPrincipalId(final String principalId) {
-        this.principalId = principalId;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-                .append("type", this.type)
-                .append("principalId", this.principalId)
-                .toString();
     }
 
     /**
@@ -264,8 +241,9 @@ public class CasEvent {
      *
      * @return the geo location
      */
+    @JsonIgnore
     public GeoLocationRequest getGeoLocation() {
-        final GeoLocationRequest request = new GeoLocationRequest();
+        val request = new GeoLocationRequest();
         request.setAccuracy(get("geoAccuracy"));
         request.setTimestamp(get("geoTimestamp"));
         request.setLongitude(get("geoLongitude"));

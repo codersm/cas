@@ -1,7 +1,8 @@
 package org.apereo.cas.authentication;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apereo.cas.authentication.principal.Principal;
+
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
 import java.io.Serializable;
 import java.time.ZonedDateTime;
@@ -29,7 +30,7 @@ import java.util.Map;
  * @author Marvin S. Addison
  * @since 3.0.0
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 public interface Authentication extends Serializable {
 
     /**
@@ -54,7 +55,6 @@ public interface Authentication extends Serializable {
      */
     Map<String, Object> getAttributes();
 
-
     /**
      * Add attribute to the authentication object and update the instance.
      *
@@ -78,7 +78,7 @@ public interface Authentication extends Serializable {
      *
      * @return Map of handler names to successful authentication result produced by that handler.
      */
-    Map<String, HandlerResult> getSuccesses();
+    Map<String, AuthenticationHandlerExecutionResult> getSuccesses();
 
     /**
      * Gets a map describing failed authentications. By definition the failures here were not sufficient to prevent
@@ -86,7 +86,7 @@ public interface Authentication extends Serializable {
      *
      * @return Map of authentication handler names to the authentication errors produced on attempted authentication.
      */
-    Map<String, Class<? extends Throwable>> getFailures();
+    Map<String, Throwable> getFailures();
 
     /**
      * Updates the authentication object with what's passed.

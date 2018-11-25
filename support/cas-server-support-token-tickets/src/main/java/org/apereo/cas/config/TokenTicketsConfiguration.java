@@ -5,6 +5,8 @@ import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.token.TokenTicketBuilder;
 import org.apereo.cas.token.authentication.principal.TokenWebApplicationServiceResponseBuilder;
+
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -23,15 +25,15 @@ public class TokenTicketsConfiguration {
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
     @Autowired
     @Qualifier("tokenTicketBuilder")
-    private TokenTicketBuilder tokenTicketBuilder;
+    private ObjectProvider<TokenTicketBuilder> tokenTicketBuilder;
 
     @Bean
     public ResponseBuilder webApplicationServiceResponseBuilder() {
-        return new TokenWebApplicationServiceResponseBuilder(servicesManager, tokenTicketBuilder);
+        return new TokenWebApplicationServiceResponseBuilder(servicesManager.getIfAvailable(), tokenTicketBuilder.getIfAvailable());
     }
 
 }

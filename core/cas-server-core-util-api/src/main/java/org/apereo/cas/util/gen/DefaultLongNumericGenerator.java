@@ -7,16 +7,18 @@ import java.util.concurrent.atomic.AtomicLong;
  * allows for wrapping (to restart count) if the maximum is reached.
  *
  * @author Scott Battaglia
-
  * @since 3.0.0
  */
 public class DefaultLongNumericGenerator implements LongNumericGenerator {
 
-    /** The maximum length the string can be. */
-    private static final int MAX_STRING_LENGTH = Long.toString(Long.MAX_VALUE)
-        .length();
+    /**
+     * The maximum length the string can be.
+     */
+    private static final int MAX_STRING_LENGTH = Long.toString(Long.MAX_VALUE).length();
 
-    /** The minimum length the String can be. */
+    /**
+     * The minimum length the String can be.
+     */
     private static final int MIN_STRING_LENGTH = 1;
 
     private final AtomicLong count;
@@ -26,7 +28,6 @@ public class DefaultLongNumericGenerator implements LongNumericGenerator {
      */
     public DefaultLongNumericGenerator() {
         this(0);
-        // nothing to do
     }
 
     /**
@@ -52,17 +53,17 @@ public class DefaultLongNumericGenerator implements LongNumericGenerator {
     public int maxLength() {
         return DefaultLongNumericGenerator.MAX_STRING_LENGTH;
     }
-    
+
     @Override
     public int minLength() {
         return DefaultLongNumericGenerator.MIN_STRING_LENGTH;
     }
 
-    
+
     /**
      * Gets the next value.
      *
-     * @return the next value. If the count has reached {@link Long#MAX_VALUE}, 
+     * @return the next value. If the count has reached {@link Long#MAX_VALUE},
      * then {@link Long#MAX_VALUE} is returned. Otherwise, the next increment.
      */
     protected long getNextValue() {

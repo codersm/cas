@@ -1,14 +1,17 @@
 package org.apereo.cas.ticket.registry;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.CipherExecutor;
 import org.apereo.cas.ticket.Ticket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.util.Assert;
+
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.Map;
+import java.util.function.Predicate;
 
 /**
  * This is {@link AbstractMapBasedTicketRegistry}.
@@ -16,40 +19,42 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
+@NoArgsConstructor
 public abstract class AbstractMapBasedTicketRegistry extends AbstractTicketRegistry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractMapBasedTicketRegistry.class);
-
-    public AbstractMapBasedTicketRegistry() {
-    }
 
     /**
      * Creates a new, empty registry with the cipher.
      *
-     * @param cipherExecutor   the cipher executor
+     * @param cipherExecutor the cipher executor
      */
     public AbstractMapBasedTicketRegistry(final CipherExecutor cipherExecutor) {
         setCipherExecutor(cipherExecutor);
     }
 
     @Override
-    public void addTicket(final Ticket ticket) {
-        Assert.notNull(ticket, "ticket cannot be null");
-        final Ticket encTicket = encodeTicket(ticket);
+    public void addTicket(final @NonNull Ticket ticket) {
+        val encTicket = encodeTicket(ticket);
         LOGGER.debug("Added ticket [{}] to registry.", ticket.getId());
         getMapInstance().put(encTicket.getId(), encTicket);
     }
 
     @Override
-    public Ticket getTicket(final String ticketId) {
-        final String encTicketId = encodeTicketId(ticketId);
+    public Ticket getTicket(final String ticketId, final Predicate<Ticket> predicate) {
+        val encTicketId = encodeTicketId(ticketId);
         if (StringUtils.isBlank(ticketId)) {
             return null;
         }
-        final Ticket found = getMapInstance().get(encTicketId);
-        final Ticket result = decodeTicket(found);
-        if (result != null && result.isExpired()) {
-            LOGGER.debug("Ticket [{}] has expired and is now removed from the cache", result.getId());
-            getMapInstance().remove(encTicketId);
+        val found = getMapInstance().get(encTicketId);
+        if (found == null) {
+            LOGGER.debug("Ticket [{}] could not be found", encTicketId);
+            return null;
+        }
+
+        val result = decodeTicket(found);
+        if (!predicate.test(result)) {
+            LOGGER.debug("The condition enforced by the predicate [{}] cannot successfully accept/test the ticket id [{}]", ticketId,
+                predicate.getClass().getSimpleName());
             return null;
         }
         return result;
@@ -57,8 +62,8 @@ public abstract class AbstractMapBasedTicketRegistry extends AbstractTicketRegis
 
     @Override
     public boolean deleteSingleTicket(final String ticketId) {
-        final String encTicketId = encodeTicketId(ticketId);
-        if (encTicketId == null) {
+        val encTicketId = encodeTicketId(ticketId);
+        if (StringUtils.isBlank(encTicketId)) {
             return false;
         }
         return getMapInstance().remove(encTicketId) != null;
@@ -66,13 +71,13 @@ public abstract class AbstractMapBasedTicketRegistry extends AbstractTicketRegis
 
     @Override
     public long deleteAll() {
-        final int size = getMapInstance().size();
+        val size = getMapInstance().size();
         getMapInstance().clear();
         return size;
     }
 
     @Override
-    public Collection<Ticket> getTickets() {
+    public Collection<? extends Ticket> getTickets() {
         return decodeTickets(getMapInstance().values());
     }
 

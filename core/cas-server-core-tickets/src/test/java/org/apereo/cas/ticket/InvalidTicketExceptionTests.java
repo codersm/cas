@@ -1,8 +1,9 @@
 package org.apereo.cas.ticket;
 
-import static org.junit.Assert.*;
-
+import lombok.val;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * @author Misagh Moayyed
@@ -12,7 +13,7 @@ public class InvalidTicketExceptionTests {
 
     @Test
     public void verifyCodeNoThrowable() {
-        final AbstractTicketException t = new InvalidTicketException("InvalidTicketId");
+        val t = new InvalidTicketException("InvalidTicketId");
         assertEquals("INVALID_TICKET", t.getCode());
     }
 }

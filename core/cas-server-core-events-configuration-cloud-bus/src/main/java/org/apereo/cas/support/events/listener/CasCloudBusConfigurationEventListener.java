@@ -1,8 +1,9 @@
 package org.apereo.cas.support.events.listener;
 
 import org.apereo.cas.configuration.CasConfigurationPropertiesEnvironmentManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.bus.event.RefreshRemoteApplicationEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.event.EventListener;
@@ -13,18 +14,11 @@ import org.springframework.context.event.EventListener;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
+@RequiredArgsConstructor
 public class CasCloudBusConfigurationEventListener {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CasCloudBusConfigurationEventListener.class);
-
-    private final ApplicationContext applicationContext;
     private final CasConfigurationPropertiesEnvironmentManager configurationPropertiesEnvironmentManager;
-
-    public CasCloudBusConfigurationEventListener(
-            final CasConfigurationPropertiesEnvironmentManager configurationPropertiesEnvironmentManager,
-            final ApplicationContext applicationContext) {
-        this.configurationPropertiesEnvironmentManager = configurationPropertiesEnvironmentManager;
-        this.applicationContext = applicationContext;
-    }
+    private final ApplicationContext applicationContext;
 
     /**
      * Handle refresh event when issued by the cloud bus.
@@ -33,7 +27,7 @@ public class CasCloudBusConfigurationEventListener {
      */
     @EventListener
     public void handleRefreshEvent(final RefreshRemoteApplicationEvent event) {
-        LOGGER.debug("Received event [{}]", event);
+        LOGGER.trace("Received event [{}]", event);
         configurationPropertiesEnvironmentManager.rebindCasConfigurationProperties(this.applicationContext);
     }
 }

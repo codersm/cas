@@ -2,7 +2,10 @@ package org.apereo.cas.authentication.principal;
 
 import org.apereo.cas.authentication.AuthenticationHandler;
 import org.apereo.cas.authentication.Credential;
+
 import org.apereo.services.persondir.IPersonAttributeDao;
+
+import java.util.Optional;
 
 /**
  * Resolves a {@link Principal} from a {@link Credential} using an arbitrary strategy.
@@ -27,10 +30,10 @@ public interface PrincipalResolver {
      * @param credential Source credential.
      * @return the principal
      */
-    default Principal resolve(Credential credential) {
-        return resolve(credential, null, null);
+    default Principal resolve(final Credential credential) {
+        return resolve(credential, Optional.empty(), Optional.empty());
     }
-    
+
     /**
      * Resolves a principal from the given credential using an arbitrary strategy.
      * Assumes no principal is already resolved by the authentication subsystem, etc.
@@ -39,8 +42,8 @@ public interface PrincipalResolver {
      * @param handler    the authentication handler linked to the resolver. May be null.
      * @return the principal
      */
-    default Principal resolve(Credential credential, AuthenticationHandler handler) {
-        return resolve(credential, null, handler);
+    default Principal resolve(final Credential credential, final Optional<AuthenticationHandler> handler) {
+        return resolve(credential, Optional.empty(), handler);
     }
 
     /**
@@ -51,11 +54,11 @@ public interface PrincipalResolver {
      * @param handler    the authentication handler linked to the resolver. May be null.
      * @return Resolved principal, or null if the principal could not be resolved.
      */
-    Principal resolve(Credential credential, Principal principal, AuthenticationHandler handler);
+    Principal resolve(Credential credential, Optional<Principal> principal, Optional<AuthenticationHandler> handler);
 
     /**
      * Determines whether this instance supports principal resolution from the given credential. This method SHOULD
-     * be called prior to {@link #resolve(Credential, Principal, AuthenticationHandler)}.
+     * be called prior to {@link #resolve(Credential, Optional, Optional)})}.
      *
      * @param credential The credential to check for support.
      * @return True if credential is supported, false otherwise.
@@ -69,4 +72,13 @@ public interface PrincipalResolver {
      * @since 5.1
      */
     IPersonAttributeDao getAttributeRepository();
+
+    /**
+     * Gets a unique name for this principal resolver.
+     *
+     * @return resolver name.
+     */
+    default String getName() {
+        return this.getClass().getSimpleName();
+    }
 }

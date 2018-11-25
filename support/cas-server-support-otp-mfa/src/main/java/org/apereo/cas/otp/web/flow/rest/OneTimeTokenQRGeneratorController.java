@@ -1,6 +1,8 @@
 package org.apereo.cas.otp.web.flow.rest;
 
 import org.apereo.cas.util.QRUtils;
+
+import lombok.val;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -26,7 +28,7 @@ public class OneTimeTokenQRGeneratorController {
     @GetMapping(path = {"/otp/qrgen"})
     public void generate(final HttpServletResponse response, final HttpServletRequest request) throws Exception {
         response.setContentType("image/png");
-        final String key = request.getParameter("key");
+        val key = request.getParameter("key");
         QRUtils.generateQRCode(response.getOutputStream(), key, QRUtils.WIDTH_LARGE, QRUtils.WIDTH_LARGE);
     }
 

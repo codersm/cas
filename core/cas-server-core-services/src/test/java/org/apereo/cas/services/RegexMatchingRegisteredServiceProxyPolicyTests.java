@@ -1,6 +1,7 @@
 package org.apereo.cas.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -20,11 +21,11 @@ public class RegexMatchingRegisteredServiceProxyPolicyTests {
 
     @Test
     public void verifySerializeARegexMatchingRegisteredServiceProxyPolicyToJson() throws IOException {
-        final RegexMatchingRegisteredServiceProxyPolicy policyWritten = new RegexMatchingRegisteredServiceProxyPolicy("pattern");
+        val policyWritten = new RegexMatchingRegisteredServiceProxyPolicy("pattern");
 
         MAPPER.writeValue(JSON_FILE, policyWritten);
 
-        final RegisteredServiceProxyPolicy policyRead = MAPPER.readValue(JSON_FILE, RegexMatchingRegisteredServiceProxyPolicy.class);
+        val policyRead = MAPPER.readValue(JSON_FILE, RegexMatchingRegisteredServiceProxyPolicy.class);
 
         assertEquals(policyWritten, policyRead);
     }

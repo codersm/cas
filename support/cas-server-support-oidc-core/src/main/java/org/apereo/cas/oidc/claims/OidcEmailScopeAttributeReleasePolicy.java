@@ -1,7 +1,8 @@
 package org.apereo.cas.oidc.claims;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.apereo.cas.oidc.OidcConstants;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 import java.util.stream.Collectors;

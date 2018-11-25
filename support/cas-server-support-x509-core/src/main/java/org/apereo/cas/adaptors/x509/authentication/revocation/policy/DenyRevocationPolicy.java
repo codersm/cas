@@ -8,7 +8,6 @@ import java.security.GeneralSecurityException;
  *
  * @author Marvin S. Addison
  * @since 3.4.6
- *
  */
 public class DenyRevocationPolicy implements RevocationPolicy<Void> {
 
@@ -17,9 +16,7 @@ public class DenyRevocationPolicy implements RevocationPolicy<Void> {
      * whatever process invoked application of this policy.
      *
      * @param nothing SHOULD be null; ignored in all cases.
-     *
      * @throws GeneralSecurityException Thrown in all cases.
-     *
      */
     @Override
     public void apply(final Void nothing) throws GeneralSecurityException {

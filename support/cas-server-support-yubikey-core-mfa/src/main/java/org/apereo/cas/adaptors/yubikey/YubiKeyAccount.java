@@ -1,6 +1,9 @@
 package org.apereo.cas.adaptors.yubikey;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+import lombok.ToString;
 import org.hibernate.annotations.GenericGenerator;
 
 import javax.persistence.Column;
@@ -18,6 +21,10 @@ import javax.persistence.Table;
  */
 @Entity
 @Table(name = "YubiKeyAccount")
+@ToString
+@Getter
+@Setter
+@AllArgsConstructor
 public class YubiKeyAccount {
 
     @Id
@@ -26,47 +33,13 @@ public class YubiKeyAccount {
     @GenericGenerator(name = "native", strategy = "native")
     private long id = -1;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @Column(nullable = false, length = 4096)
     private String publicId;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @Column(nullable = false, unique = true)
     private String username;
 
     public YubiKeyAccount() {
         this.id = System.currentTimeMillis();
-    }
-
-    public long getId() {
-        return id;
-    }
-
-    public void setId(final long id) {
-        this.id = id;
-    }
-
-    public String getPublicId() {
-        return publicId;
-    }
-
-    public void setPublicId(final String publicId) {
-        this.publicId = publicId;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(final String username) {
-        this.username = username;
-    }
-
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-                .append("id", id)
-                .append("publicId", publicId)
-                .append("username", username)
-                .toString();
     }
 }

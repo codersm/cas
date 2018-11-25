@@ -1,5 +1,6 @@
 package org.apereo.cas.util;
 
+import lombok.experimental.UtilityClass;
 import org.aspectj.lang.JoinPoint;
 
 
@@ -8,14 +9,9 @@ import org.aspectj.lang.JoinPoint;
  *
  * @author Marvin S. Addison
  * @since 3.4
- *
  */
-public final class AopUtils {
-
-    /**
-     * Instantiates a new aop utils.
-     */
-    private AopUtils() {}
+@UtilityClass
+public class AopUtils {
 
     /**
      * Unwraps a join point that may be nested due to layered proxies.
@@ -24,8 +20,8 @@ public final class AopUtils {
      * @return Innermost join point; if not nested, simply returns the argument.
      */
     public static JoinPoint unWrapJoinPoint(final JoinPoint point) {
-        JoinPoint naked = point;
-        while (naked.getArgs().length > 0 && naked.getArgs()[0] instanceof JoinPoint) {
+        var naked = point;
+        while (naked.getArgs() != null && naked.getArgs().length > 0 && naked.getArgs()[0] instanceof JoinPoint) {
             naked = (JoinPoint) naked.getArgs()[0];
         }
         return naked;

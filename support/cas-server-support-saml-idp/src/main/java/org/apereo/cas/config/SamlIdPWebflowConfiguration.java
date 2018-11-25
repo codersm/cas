@@ -7,6 +7,10 @@ import org.apereo.cas.support.saml.services.idp.metadata.cache.SamlRegisteredSer
 import org.apereo.cas.support.saml.web.flow.SamlIdPMetadataUIAction;
 import org.apereo.cas.support.saml.web.flow.SamlIdPMetadataUIWebflowConfigurer;
 import org.apereo.cas.web.flow.CasWebflowConfigurer;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlan;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlanConfigurer;
+
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -27,48 +31,54 @@ import org.springframework.webflow.execution.Action;
  */
 @Configuration("samlIdPWebflowConfiguration")
 @EnableConfigurationProperties(CasConfigurationProperties.class)
-public class SamlIdPWebflowConfiguration {
+public class SamlIdPWebflowConfiguration implements CasWebflowExecutionPlanConfigurer {
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
-    @Autowired(required = false)
+    @Autowired
     @Qualifier("loginFlowRegistry")
-    private FlowDefinitionRegistry loginFlowDefinitionRegistry;
+    private ObjectProvider<FlowDefinitionRegistry> loginFlowDefinitionRegistry;
 
-    @Autowired(required = false)
-    private FlowBuilderServices flowBuilderServices;
+    @Autowired
+    private ObjectProvider<FlowBuilderServices> flowBuilderServices;
 
     @Autowired
     private ApplicationContext applicationContext;
 
     @Autowired
     private CasConfigurationProperties casProperties;
-    
+
     @Autowired
     @Qualifier("authenticationServiceSelectionPlan")
-    private AuthenticationServiceSelectionPlan selectionStrategies;
-            
+    private ObjectProvider<AuthenticationServiceSelectionPlan> selectionStrategies;
+
     @Autowired
     @Qualifier("defaultSamlRegisteredServiceCachingMetadataResolver")
-    private SamlRegisteredServiceCachingMetadataResolver defaultSamlRegisteredServiceCachingMetadataResolver;
+    private ObjectProvider<SamlRegisteredServiceCachingMetadataResolver> defaultSamlRegisteredServiceCachingMetadataResolver;
 
     @ConditionalOnMissingBean(name = "samlIdPMetadataUIWebConfigurer")
     @Bean
     @DependsOn("defaultWebflowConfigurer")
     public CasWebflowConfigurer samlIdPMetadataUIWebConfigurer() {
-        final CasWebflowConfigurer w = new SamlIdPMetadataUIWebflowConfigurer(flowBuilderServices, 
-                loginFlowDefinitionRegistry, samlIdPMetadataUIParserAction(), applicationContext, casProperties);
-        w.initialize();
-        return w;
+        return new SamlIdPMetadataUIWebflowConfigurer(flowBuilderServices.getIfAvailable(),
+            loginFlowDefinitionRegistry.getIfAvailable(),
+            samlIdPMetadataUIParserAction(),
+            applicationContext,
+            casProperties);
     }
 
     @ConditionalOnMissingBean(name = "samlIdPMetadataUIParserAction")
     @Bean
     public Action samlIdPMetadataUIParserAction() {
-        return new SamlIdPMetadataUIAction(servicesManager,
-                defaultSamlRegisteredServiceCachingMetadataResolver,
-                selectionStrategies);
+        return new SamlIdPMetadataUIAction(servicesManager.getIfAvailable(),
+            defaultSamlRegisteredServiceCachingMetadataResolver.getIfAvailable(),
+            selectionStrategies.getIfAvailable());
+    }
+
+    @Override
+    public void configureWebflowExecutionPlan(final CasWebflowExecutionPlan plan) {
+        plan.registerWebflowConfigurer(samlIdPMetadataUIWebConfigurer());
     }
 }

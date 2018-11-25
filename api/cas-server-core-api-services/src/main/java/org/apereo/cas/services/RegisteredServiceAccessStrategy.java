@@ -6,7 +6,9 @@ import org.springframework.core.Ordered;
 
 import java.io.Serializable;
 import java.net.URI;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * This is {@link RegisteredServiceAccessStrategy}
@@ -16,7 +18,7 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 4.1
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
 public interface RegisteredServiceAccessStrategy extends Serializable, Ordered {
 
     /**
@@ -27,6 +29,15 @@ public interface RegisteredServiceAccessStrategy extends Serializable, Ordered {
     @JsonIgnore
     default boolean isServiceAccessAllowed() {
         return true;
+    }
+
+    /**
+     * Sets service access allowed.
+     *
+     * @param enabled the value
+     */
+    @JsonIgnore
+    default void setServiceAccessAllowed(final boolean enabled) {
     }
 
     /**
@@ -87,19 +98,20 @@ public interface RegisteredServiceAccessStrategy extends Serializable, Ordered {
     }
 
     /**
-     * Sets service access allowed.
-     *
-     * @param enabled the value
-     */
-    @JsonIgnore
-    default void setServiceAccessAllowed(final boolean enabled) {
-    }
-
-    /**
      * Return the delegated authentication policy for this service.
+     *
      * @return authn policy
      */
     default RegisteredServiceDelegatedAuthenticationPolicy getDelegatedAuthenticationPolicy() {
         return null;
+    }
+
+    /**
+     * Expose underlying attributes for auditing purposes.
+     *
+     * @return required attributes
+     */
+    default Map<String, Set<String>> getRequiredAttributes() {
+        return new HashMap<>();
     }
 }

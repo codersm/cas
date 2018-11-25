@@ -3,6 +3,7 @@ package org.apereo.cas.authentication.policy;
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
 import org.apereo.cas.authentication.exceptions.AccountDisabledException;
 import org.apereo.cas.authentication.exceptions.AccountPasswordMustChangeException;
+import org.apereo.cas.category.RestfulApiCategory;
 import org.apereo.cas.config.CasCoreHttpConfiguration;
 import org.apereo.cas.config.CasCoreTicketCatalogConfiguration;
 import org.apereo.cas.config.CasCoreTicketIdGeneratorsConfiguration;
@@ -11,12 +12,14 @@ import org.apereo.cas.config.CasCoreUtilConfiguration;
 import org.apereo.cas.config.CasCoreWebConfiguration;
 import org.apereo.cas.config.CasDefaultServiceTicketIdGeneratorsConfiguration;
 import org.apereo.cas.config.support.CasWebApplicationServiceFactoryConfiguration;
+
 import org.hamcrest.CustomMatcher;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.mockito.MockitoAnnotations;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.autoconfigure.RefreshAutoConfiguration;
@@ -24,7 +27,8 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit4.rules.SpringClassRule;
+import org.springframework.test.context.junit4.rules.SpringMethodRule;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestTemplate;
 
@@ -32,6 +36,8 @@ import javax.security.auth.login.AccountExpiredException;
 import javax.security.auth.login.AccountLockedException;
 import javax.security.auth.login.AccountNotFoundException;
 import javax.security.auth.login.FailedLoginException;
+
+import java.util.LinkedHashSet;
 
 import static org.junit.Assert.*;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
@@ -43,32 +49,39 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @author Misagh Moayyed
  * @since 5.2.0
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {RefreshAutoConfiguration.class,
-        CasCoreTicketIdGeneratorsConfiguration.class,
-        CasDefaultServiceTicketIdGeneratorsConfiguration.class,
-        CasCoreTicketsConfiguration.class,
-        CasCoreWebConfiguration.class,
-        CasCoreUtilConfiguration.class,
-        CasCoreHttpConfiguration.class,
-        CasWebApplicationServiceFactoryConfiguration.class,
-        CasCoreTicketCatalogConfiguration.class
+@SpringBootTest(classes = {
+    RefreshAutoConfiguration.class,
+    CasCoreTicketIdGeneratorsConfiguration.class,
+    CasDefaultServiceTicketIdGeneratorsConfiguration.class,
+    CasCoreTicketsConfiguration.class,
+    CasCoreWebConfiguration.class,
+    CasCoreUtilConfiguration.class,
+    CasCoreHttpConfiguration.class,
+    CasWebApplicationServiceFactoryConfiguration.class,
+    CasCoreTicketCatalogConfiguration.class
 })
 @DirtiesContext
+@Category(RestfulApiCategory.class)
 public class RestfulAuthenticationPolicyTests {
+    @ClassRule
+    public static final SpringClassRule SPRING_CLASS_RULE = new SpringClassRule();
+
     private static final String URI = "http://rest.endpoint.com";
+
+    @Rule
+    public final SpringMethodRule springMethodRule = new SpringMethodRule();
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
 
-    private RestTemplate restTemplate = new RestTemplate();
+    private final RestTemplate restTemplate = new RestTemplate();
 
     private MockRestServiceServer mockServer;
 
     private RestfulAuthenticationPolicy policy;
 
     @Before
-    public void setUp() {
+    public void initialize() {
         MockitoAnnotations.initMocks(this);
         mockServer = MockRestServiceServer.createServer(restTemplate);
         policy = new RestfulAuthenticationPolicy(this.restTemplate, URI);
@@ -77,10 +90,10 @@ public class RestfulAuthenticationPolicyTests {
     @Test
     public void verifyPolicyGood() throws Exception {
         mockServer.expect(requestTo(URI))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withSuccess());
-        assertTrue(policy.isSatisfiedBy(CoreAuthenticationTestUtils.getAuthentication("casuser")));
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withSuccess());
+        assertTrue(policy.isSatisfiedBy(CoreAuthenticationTestUtils.getAuthentication("casuser"), new LinkedHashSet<>()));
         mockServer.verify();
     }
 
@@ -98,7 +111,7 @@ public class RestfulAuthenticationPolicyTests {
 
 
     private void verifyPolicyFails(final Class exceptionClass, final HttpStatus status) throws Exception {
-        thrown.expectCause(new CustomMatcher<Throwable>("policy") {
+        thrown.expectCause(new CustomMatcher<>("policy") {
             @Override
             public boolean matches(final Object o) {
                 return o.getClass().equals(exceptionClass);
@@ -106,10 +119,10 @@ public class RestfulAuthenticationPolicyTests {
         });
 
         mockServer.expect(requestTo(URI))
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
-                .andExpect(method(HttpMethod.POST))
-                .andRespond(withStatus(status));
-        assertTrue(policy.isSatisfiedBy(CoreAuthenticationTestUtils.getAuthentication("casuser")));
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON_UTF8))
+            .andExpect(method(HttpMethod.POST))
+            .andRespond(withStatus(status));
+        assertTrue(policy.isSatisfiedBy(CoreAuthenticationTestUtils.getAuthentication("casuser"), new LinkedHashSet<>()));
         mockServer.verify();
     }
 }

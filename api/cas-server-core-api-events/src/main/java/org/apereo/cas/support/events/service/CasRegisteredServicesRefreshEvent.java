@@ -1,5 +1,6 @@
 package org.apereo.cas.support.events.service;
 
+
 /**
  * This is {@link CasRegisteredServicesRefreshEvent} that is signaled
  * when a registered service is saved into the CAS registry.
@@ -19,5 +20,5 @@ public class CasRegisteredServicesRefreshEvent extends BaseCasRegisteredServiceE
     public CasRegisteredServicesRefreshEvent(final Object source) {
         super(source);
     }
-    
+
 }

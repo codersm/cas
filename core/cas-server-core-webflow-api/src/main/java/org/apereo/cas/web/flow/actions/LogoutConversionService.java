@@ -14,7 +14,6 @@ public class LogoutConversionService extends DefaultConversionService {
      * Build a new conversion service with a {@link CompositeFlowExecutionKeyConverter}.
      */
     public LogoutConversionService() {
-        super();
         addConverter(new CompositeFlowExecutionKeyConverter());
     }
 }

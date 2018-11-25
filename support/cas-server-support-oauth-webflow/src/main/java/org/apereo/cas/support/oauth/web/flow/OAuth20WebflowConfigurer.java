@@ -1,11 +1,12 @@
 package org.apereo.cas.support.oauth.web.flow;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.web.flow.configurer.AbstractCasWebflowConfigurer;
 import org.apereo.cas.web.flow.CasWebflowConstants;
+import org.apereo.cas.web.flow.configurer.AbstractCasWebflowConfigurer;
+
+import lombok.val;
 import org.springframework.context.ApplicationContext;
 import org.springframework.webflow.definition.registry.FlowDefinitionRegistry;
-import org.springframework.webflow.engine.Flow;
 import org.springframework.webflow.engine.ViewState;
 import org.springframework.webflow.engine.builder.support.FlowBuilderServices;
 import org.springframework.webflow.execution.Action;
@@ -30,9 +31,9 @@ public class OAuth20WebflowConfigurer extends AbstractCasWebflowConfigurer {
 
     @Override
     protected void doInitialize() {
-        final Flow loginFlow = getLoginFlow();
+        val loginFlow = getLoginFlow();
         if (loginFlow != null) {
-            final ViewState state = getTransitionableState(loginFlow, CasWebflowConstants.STATE_ID_VIEW_LOGIN_FORM, ViewState.class);
+            val state = getTransitionableState(loginFlow, CasWebflowConstants.STATE_ID_VIEW_LOGIN_FORM, ViewState.class);
             state.getEntryActionList().add(this.oauth20RegisteredServiceUIAction);
         }
     }

@@ -3,7 +3,7 @@ package org.apereo.cas;
 import org.apereo.cas.authentication.AuthenticationException;
 import org.apereo.cas.authentication.AuthenticationResult;
 import org.apereo.cas.authentication.principal.Service;
-import org.apereo.cas.logout.LogoutRequest;
+import org.apereo.cas.logout.slo.SingleLogoutRequest;
 import org.apereo.cas.ticket.AbstractTicketException;
 import org.apereo.cas.ticket.InvalidTicketException;
 import org.apereo.cas.ticket.ServiceTicket;
@@ -97,8 +97,7 @@ public interface CentralAuthenticationService {
      * @throws InvalidTicketException the invalid ticket exception
      * @since 4.1.0
      */
-    <T extends Ticket> T getTicket(String ticketId, Class<T> clazz)
-        throws InvalidTicketException;
+    <T extends Ticket> T getTicket(String ticketId, Class<T> clazz) throws InvalidTicketException;
 
     /**
      * Attempts to delete a ticket from the underlying store
@@ -110,7 +109,7 @@ public interface CentralAuthenticationService {
      *
      * @param ticketId the ticket id
      */
-    default void deleteTicket(String ticketId) {
+    default void deleteTicket(final String ticketId) {
     }
 
     /**
@@ -145,8 +144,7 @@ public interface CentralAuthenticationService {
      * @throws AuthenticationException on errors authenticating the credentials
      * @throws AbstractTicketException if the ticket could not be created.
      */
-    ServiceTicket grantServiceTicket(
-        String ticketGrantingTicketId, Service service, AuthenticationResult authenticationResult)
+    ServiceTicket grantServiceTicket(String ticketGrantingTicketId, Service service, AuthenticationResult authenticationResult)
         throws AuthenticationException, AbstractTicketException;
 
     /**
@@ -165,9 +163,7 @@ public interface CentralAuthenticationService {
      * @return Non -null service ticket identifier.
      * @throws AbstractTicketException if the ticket could not be created.
      */
-    ProxyTicket grantProxyTicket(
-        String proxyGrantingTicket, Service service)
-        throws AbstractTicketException;
+    ProxyTicket grantProxyTicket(String proxyGrantingTicket, Service service) throws AbstractTicketException;
 
     /**
      * Validate a ServiceTicket for a particular Service.
@@ -187,7 +183,7 @@ public interface CentralAuthenticationService {
      * @param ticketGrantingTicketId the id of the ticket we want to destroy
      * @return the logout requests.
      */
-    List<LogoutRequest> destroyTicketGrantingTicket(String ticketGrantingTicketId);
+    List<SingleLogoutRequest> destroyTicketGrantingTicket(String ticketGrantingTicketId);
 
     /**
      * Delegate a TicketGrantingTicket to a Service for proxying authentication

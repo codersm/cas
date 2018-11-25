@@ -1,12 +1,15 @@
 package org.apereo.cas.support.saml.util;
 
-import static org.junit.Assert.*;
-
 import org.apereo.cas.support.saml.AbstractOpenSamlTests;
+
+import lombok.val;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * Test cases for {@link SamlCompliantUniqueTicketIdGenerator}.
+ *
  * @author Scott Battaglia
  * @since 3.4.3
  */
@@ -14,13 +17,13 @@ public class SamlCompliantUniqueTicketIdGeneratorTests extends AbstractOpenSamlT
 
     @Test
     public void verifySaml1Compliant() {
-        final SamlCompliantUniqueTicketIdGenerator g = new SamlCompliantUniqueTicketIdGenerator("http://www.cnn.com");
+        val g = new SamlCompliantUniqueTicketIdGenerator("http://www.cnn.com");
         assertNotNull(g.getNewTicketId("TT"));
     }
 
     @Test
     public void verifySaml2Compliant() {
-        final SamlCompliantUniqueTicketIdGenerator g = new SamlCompliantUniqueTicketIdGenerator("http://www.cnn.com");
+        val g = new SamlCompliantUniqueTicketIdGenerator("http://www.cnn.com");
         g.setSaml2compliant(true);
         assertNotNull(g.getNewTicketId("TT"));
 

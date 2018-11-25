@@ -1,22 +1,23 @@
 package org.apereo.cas.audit;
 
+import org.apereo.cas.audit.spi.BaseAuditConfigurationTests;
+import org.apereo.cas.audit.spi.config.CasCoreAuditConfiguration;
+import org.apereo.cas.category.MongoDbCategory;
 import org.apereo.cas.config.CasCoreUtilConfiguration;
 import org.apereo.cas.config.CasCoreWebConfiguration;
 import org.apereo.cas.config.CasSupportMongoDbAuditConfiguration;
 import org.apereo.cas.config.support.CasWebApplicationServiceFactoryConfiguration;
-import org.apereo.inspektr.audit.AuditActionContext;
-import org.apereo.inspektr.audit.AuditPointRuntimeInfo;
+import org.apereo.cas.util.junit.ConditionalIgnore;
+import org.apereo.cas.util.junit.RunningContinuousIntegrationCondition;
+
+import lombok.Getter;
 import org.apereo.inspektr.audit.AuditTrailManager;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.experimental.categories.Category;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.cloud.autoconfigure.RefreshAutoConfiguration;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
-
-import java.util.Date;
 
 /**
  * This is {@link MongoDbAuditTrailManagerTests}.
@@ -24,28 +25,30 @@ import java.util.Date;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
-@RunWith(SpringRunner.class)
 @SpringBootTest(
-        classes = {
-                CasSupportMongoDbAuditConfiguration.class,
-                CasCoreUtilConfiguration.class,
-                CasWebApplicationServiceFactoryConfiguration.class,
-                RefreshAutoConfiguration.class,
-                CasCoreWebConfiguration.class})
-@TestPropertySource(locations = {"classpath:/mongoaudit.properties"})
-public class MongoDbAuditTrailManagerTests {
+    classes = {
+        CasCoreAuditConfiguration.class,
+        CasSupportMongoDbAuditConfiguration.class,
+        CasCoreUtilConfiguration.class,
+        CasWebApplicationServiceFactoryConfiguration.class,
+        RefreshAutoConfiguration.class,
+        CasCoreWebConfiguration.class})
+@TestPropertySource(properties = {
+    "cas.audit.mongo.host=localhost",
+    "cas.audit.mongo.port=27017",
+    "cas.audit.mongo.dropCollection=true",
+    "cas.audit.mongo.asynchronous=false",
+    "cas.audit.mongo.userId=root",
+    "cas.audit.mongo.password=secret",
+    "cas.audit.mongo.databaseName=audit",
+    "cas.audit.mongo.authenticationDatabaseName=admin"
+})
+@Category(MongoDbCategory.class)
+@Getter
+@ConditionalIgnore(condition = RunningContinuousIntegrationCondition.class, port = 27017)
+public class MongoDbAuditTrailManagerTests extends BaseAuditConfigurationTests {
 
     @Autowired
-    @Qualifier("auditTrailManager")
+    @Qualifier("mongoDbAuditTrailManager")
     private AuditTrailManager auditTrailManager;
-
-    @Test
-    public void verify() {
-        final AuditPointRuntimeInfo runtime = (AuditPointRuntimeInfo) () -> null;
-        final AuditActionContext ctx = new AuditActionContext("casuser", "resource",
-                "action", "appcode", new Date(), "clientIp",
-                "serverIp", runtime);
-        auditTrailManager.record(ctx);
-    }
-
 }

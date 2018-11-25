@@ -1,14 +1,16 @@
 package org.apereo.cas.adaptors.yubikey;
 
-import com.yubico.client.v2.YubicoClient;
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.authentication.AbstractMultifactorAuthenticationProvider;
 import org.apereo.cas.configuration.model.support.mfa.YubiKeyMultifactorProperties;
+import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.util.EncodingUtils;
 import org.apereo.cas.util.http.HttpClient;
-import org.apereo.cas.util.http.HttpMessage;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.yubico.client.v2.YubicoClient;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 
 import java.net.URL;
 
@@ -18,36 +20,25 @@ import java.net.URL;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
+@Slf4j
+@RequiredArgsConstructor
 public class YubiKeyMultifactorAuthenticationProvider extends AbstractMultifactorAuthenticationProvider {
-    private static final Logger LOGGER = LoggerFactory.getLogger(YubiKeyMultifactorAuthenticationProvider.class);
 
     private static final long serialVersionUID = 4789727148634156909L;
 
-    private YubicoClient client;
-    private HttpClient httpClient;
-
-    /**
-     * Required for serialization and reflection.
-     */
-    public YubiKeyMultifactorAuthenticationProvider() {
-    }
-
-    public YubiKeyMultifactorAuthenticationProvider(final YubicoClient client,
-                                                    final HttpClient httpClient) {
-        this.client = client;
-        this.httpClient = httpClient;
-    }
+    private final transient YubicoClient client;
+    private final transient HttpClient httpClient;
 
     @Override
-    protected boolean isAvailable() {
+    public boolean isAvailable(final RegisteredService service) {
         try {
-            final String[] endpoints = client.getWsapiUrls();
-            for (final String endpoint : endpoints) {
+            val endpoints = client.getWsapiUrls();
+            for (val endpoint : endpoints) {
                 LOGGER.debug("Pinging YubiKey API endpoint at [{}]", endpoint);
-                final HttpMessage msg = this.httpClient.sendMessageToEndPoint(new URL(endpoint));
-                final String message = msg != null ? msg.getMessage() : null;
+                val msg = this.httpClient.sendMessageToEndPoint(new URL(endpoint));
+                val message = msg != null ? msg.getMessage() : null;
                 if (StringUtils.isNotBlank(message)) {
-                    final String response = EncodingUtils.urlDecode(message);
+                    val response = EncodingUtils.urlDecode(message);
                     LOGGER.debug("Received YubiKey ping response [{}]", response);
                     return true;
                 }
@@ -67,5 +58,4 @@ public class YubiKeyMultifactorAuthenticationProvider extends AbstractMultifacto
     public String getId() {
         return StringUtils.defaultIfBlank(super.getId(), YubiKeyMultifactorProperties.DEFAULT_IDENTIFIER);
     }
-
 }

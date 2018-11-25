@@ -1,8 +1,11 @@
 package org.apereo.cas.services;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
 import org.apereo.cas.services.replication.NoOpRegisteredServiceReplicationStrategy;
+import org.apereo.cas.services.resource.DefaultRegisteredServiceResourceNamingStrategy;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
+import org.apache.commons.io.FileUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -25,11 +28,13 @@ public class OidcRegisteredServiceTests {
 
     private static final ClassPathResource RESOURCE = new ClassPathResource("services");
 
-    private final ServiceRegistryDao dao;
+    private final ServiceRegistry dao;
 
     public OidcRegisteredServiceTests() throws Exception {
-        this.dao = new JsonServiceRegistryDao(RESOURCE, false, 
-                mock(ApplicationEventPublisher.class), new NoOpRegisteredServiceReplicationStrategy());
+        this.dao = new JsonServiceRegistry(RESOURCE, false,
+            mock(ApplicationEventPublisher.class),
+            new NoOpRegisteredServiceReplicationStrategy(),
+            new DefaultRegisteredServiceResourceNamingStrategy());
     }
 
     @BeforeClass
@@ -39,16 +44,16 @@ public class OidcRegisteredServiceTests {
 
     @Test
     public void checkSaveMethod() {
-        final OidcRegisteredService r = new OidcRegisteredService();
+        val r = new OidcRegisteredService();
         r.setName("checkSaveMethod");
         r.setServiceId("testId");
-        r.setJwks("file:/etc/cas/thekeystorehere.jwks");
+        r.setJwks("file:/tmp/thekeystorehere.jwks");
         r.setSignIdToken(true);
         r.setBypassApprovalPrompt(true);
-        final RegisteredService r2 = this.dao.save(r);
+        val r2 = this.dao.save(r);
         assertTrue(r2 instanceof OidcRegisteredService);
         this.dao.load();
-        final RegisteredService r3 = this.dao.findServiceById(r2.getId());
+        val r3 = this.dao.findServiceById(r2.getId());
         assertTrue(r3 instanceof OidcRegisteredService);
         assertEquals(r, r2);
         assertEquals(r2, r3);
@@ -56,15 +61,15 @@ public class OidcRegisteredServiceTests {
 
     @Test
     public void verifySerializeAOidcRegisteredServiceToJson() throws IOException {
-        final OidcRegisteredService serviceWritten = new OidcRegisteredService();
+        val serviceWritten = new OidcRegisteredService();
         serviceWritten.setName("verifySerializeAOidcRegisteredServiceToJson");
         serviceWritten.setServiceId("testId");
-        serviceWritten.setJwks("file:/etc/cas/thekeystorehere.jwks");
+        serviceWritten.setJwks("file:/tmp/thekeystorehere.jwks");
         serviceWritten.setSignIdToken(true);
         serviceWritten.setBypassApprovalPrompt(true);
         serviceWritten.setUsernameAttributeProvider(new PairwiseOidcRegisteredServiceUsernameAttributeProvider());
         MAPPER.writeValue(JSON_FILE, serviceWritten);
-        final RegisteredService serviceRead = MAPPER.readValue(JSON_FILE, OidcRegisteredService.class);
+        val serviceRead = MAPPER.readValue(JSON_FILE, OidcRegisteredService.class);
         assertEquals(serviceWritten, serviceRead);
     }
 }

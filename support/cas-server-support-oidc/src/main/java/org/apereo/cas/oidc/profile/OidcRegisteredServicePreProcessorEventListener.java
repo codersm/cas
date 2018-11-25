@@ -3,8 +3,9 @@ package org.apereo.cas.oidc.profile;
 import org.apereo.cas.services.OidcRegisteredService;
 import org.apereo.cas.support.events.service.CasRegisteredServicesLoadedEvent;
 import org.apereo.cas.support.oauth.profile.OAuth20ProfileScopeToAttributesFilter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 
 /**
@@ -15,14 +16,11 @@ import org.springframework.context.event.EventListener;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
+@RequiredArgsConstructor
 public class OidcRegisteredServicePreProcessorEventListener {
-    private static final Logger LOGGER = LoggerFactory.getLogger(OidcRegisteredServicePreProcessorEventListener.class);
 
     private final OAuth20ProfileScopeToAttributesFilter scopeToAttributesFilter;
-
-    public OidcRegisteredServicePreProcessorEventListener(final OAuth20ProfileScopeToAttributesFilter scopeToAttributesFilter) {
-        this.scopeToAttributesFilter = scopeToAttributesFilter;
-    }
 
     /**
      * Handle registered service loaded event.
@@ -32,12 +30,12 @@ public class OidcRegisteredServicePreProcessorEventListener {
     @EventListener
     public void handleRegisteredServicesLoadedEvent(final CasRegisteredServicesLoadedEvent event) {
         event.getServices()
-                .stream()
-                .filter(OidcRegisteredService.class::isInstance)
-                .forEach(s -> {
-                    LOGGER.debug("Attempting to reconcile scopes and attributes for service [{}] of type [{}]",
-                            s.getServiceId(), s.getClass().getSimpleName());
-                    this.scopeToAttributesFilter.reconcile(s);
-                });
+            .stream()
+            .filter(OidcRegisteredService.class::isInstance)
+            .forEach(s -> {
+                LOGGER.trace("Attempting to reconcile scopes and attributes for service [{}] of type [{}]",
+                    s.getServiceId(), s.getClass().getSimpleName());
+                this.scopeToAttributesFilter.reconcile(s);
+            });
     }
 }

@@ -1,12 +1,10 @@
 package org.apereo.cas.adaptors.rest;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apereo.cas.authentication.exceptions.AccountDisabledException;
 import org.apereo.cas.authentication.AuthenticationHandler;
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.exceptions.AccountDisabledException;
 import org.apereo.cas.authentication.principal.DefaultPrincipalFactory;
-import org.apereo.cas.authentication.principal.Principal;
+import org.apereo.cas.category.RestfulApiCategory;
 import org.apereo.cas.config.CasCoreAuthenticationConfiguration;
 import org.apereo.cas.config.CasCoreAuthenticationHandlersConfiguration;
 import org.apereo.cas.config.CasCoreAuthenticationMetadataConfiguration;
@@ -23,11 +21,15 @@ import org.apereo.cas.config.CasCoreWebConfiguration;
 import org.apereo.cas.config.CasPersonDirectoryConfiguration;
 import org.apereo.cas.config.CasRestAuthenticationConfiguration;
 import org.apereo.cas.config.support.CasWebApplicationServiceFactoryConfiguration;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.junit.Before;
+import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.junit.rules.ExpectedException;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
@@ -39,7 +41,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit4.rules.SpringClassRule;
+import org.springframework.test.context.junit4.rules.SpringMethodRule;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.test.web.client.ResponseActions;
 import org.springframework.transaction.annotation.EnableTransactionManagement;
@@ -50,9 +53,11 @@ import javax.security.auth.login.FailedLoginException;
 import java.io.StringWriter;
 
 import static org.junit.Assert.*;
-import static org.springframework.test.web.client.ExpectedCount.*;
-import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
-import static org.springframework.test.web.client.response.MockRestResponseCreators.*;
+import static org.springframework.test.web.client.ExpectedCount.manyTimes;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
 /**
  * This is {@link RestAuthenticationHandlerTests}.
@@ -60,8 +65,8 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-@RunWith(SpringRunner.class)
-@SpringBootTest(classes = {CasRestAuthenticationConfiguration.class,
+@SpringBootTest(classes = {
+    CasRestAuthenticationConfiguration.class,
     CasCoreAuthenticationConfiguration.class,
     AopAutoConfiguration.class,
     CasCoreServicesAuthenticationConfiguration.class,
@@ -83,7 +88,16 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 @EnableScheduling
 @EnableTransactionManagement(proxyTargetClass = true)
 @EnableAspectJAutoProxy(proxyTargetClass = true)
+@Category(RestfulApiCategory.class)
 public class RestAuthenticationHandlerTests {
+
+    @ClassRule
+    public static final SpringClassRule SPRING_CLASS_RULE = new SpringClassRule();
+
+    private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
+
+    @Rule
+    public final SpringMethodRule springMethodRule = new SpringMethodRule();
 
     @Rule
     public ExpectedException thrown = ExpectedException.none();
@@ -99,7 +113,7 @@ public class RestAuthenticationHandlerTests {
     private ResponseActions server;
 
     @Before
-    public void setUp() {
+    public void initialize() {
         server = MockRestServiceServer.bindTo(restAuthenticationTemplate).build()
             .expect(manyTimes(), requestTo("http://localhost:8081/authn"))
             .andExpect(method(HttpMethod.POST));
@@ -107,15 +121,14 @@ public class RestAuthenticationHandlerTests {
 
     @Test
     public void verifySuccess() throws Exception {
-        final Principal principalWritten = new DefaultPrincipalFactory().createPrincipal("casuser");
+        val principalWritten = new DefaultPrincipalFactory().createPrincipal("casuser");
 
-        final ObjectMapper mapper = new ObjectMapper().findAndRegisterModules();
-        final StringWriter writer = new StringWriter();
-        mapper.writeValue(writer, principalWritten);
+        val writer = new StringWriter();
+        MAPPER.writeValue(writer, principalWritten);
 
         server.andRespond(withSuccess(writer.toString(), MediaType.APPLICATION_JSON));
 
-        final HandlerResult res = authenticationHandler.authenticate(CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword());
+        val res = authenticationHandler.authenticate(CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword());
         assertEquals("casuser", res.getPrincipal().getId());
     }
 

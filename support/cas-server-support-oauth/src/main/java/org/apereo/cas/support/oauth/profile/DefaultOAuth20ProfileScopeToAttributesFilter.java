@@ -1,5 +1,6 @@
 package org.apereo.cas.support.oauth.profile;
 
+
 /**
  * This is {@link DefaultOAuth20ProfileScopeToAttributesFilter}.
  *

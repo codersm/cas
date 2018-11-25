@@ -1,7 +1,8 @@
 package org.apereo.cas.adaptors.trusted.authentication.principal;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.util.CollectionUtils;
+
+import org.apache.commons.lang3.StringUtils;
 
 import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
@@ -21,12 +22,12 @@ public class ShibbolethServiceProviderRequestPrincipalAttributesExtractor implem
     @Override
     public Map<String, Object> getAttributes(final HttpServletRequest request) {
         return Collections.list(request
-                .getHeaderNames())
-                .stream()
-                .filter(t -> t.toUpperCase().startsWith(PREFIX))
-                .filter(t -> StringUtils.isNotBlank(request.getHeader(t)))
-                .map(t -> StringUtils.removeAll(t, PREFIX))
-                .collect(Collectors.toMap(Function.identity(),
-                    t -> CollectionUtils.wrap(request.getHeader(PREFIX + t).split("(?<!\\\\);"))));
+            .getHeaderNames())
+            .stream()
+            .filter(t -> t.toUpperCase().startsWith(PREFIX))
+            .filter(t -> StringUtils.isNotBlank(request.getHeader(t)))
+            .map(t -> StringUtils.removeAll(t, PREFIX))
+            .collect(Collectors.toMap(Function.identity(),
+                t -> CollectionUtils.wrap(request.getHeader(PREFIX + t).split("(?<!\\\\);"))));
     }
 }

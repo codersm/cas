@@ -2,6 +2,7 @@ package org.apereo.cas.support.validation;
 
 import org.apereo.cas.util.cipher.BaseStringCipherExecutor;
 
+
 /**
  * This is {@link SecurityTokenServiceCredentialCipherExecutor}.
  *
@@ -11,8 +12,10 @@ import org.apereo.cas.util.cipher.BaseStringCipherExecutor;
 public class SecurityTokenServiceCredentialCipherExecutor extends BaseStringCipherExecutor {
     public SecurityTokenServiceCredentialCipherExecutor(final String secretKeyEncryption,
                                                         final String secretKeySigning,
-                                                        final String alg) {
-        super(secretKeyEncryption, secretKeySigning, alg);
+                                                        final String alg,
+                                                        final int signingKeySize,
+                                                        final int encryptionKeySize) {
+        super(secretKeyEncryption, secretKeySigning, alg, signingKeySize, encryptionKeySize);
     }
 
     @Override

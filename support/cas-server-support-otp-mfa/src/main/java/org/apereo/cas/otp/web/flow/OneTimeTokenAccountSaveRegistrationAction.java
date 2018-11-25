@@ -1,8 +1,11 @@
 package org.apereo.cas.otp.web.flow;
 
+import org.apereo.cas.authentication.OneTimeTokenAccount;
 import org.apereo.cas.otp.repository.credentials.OneTimeTokenCredentialRepository;
-import org.apereo.cas.otp.repository.credentials.OneTimeTokenAccount;
 import org.apereo.cas.web.support.WebUtils;
+
+import lombok.RequiredArgsConstructor;
+import lombok.val;
 import org.springframework.webflow.action.AbstractAction;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
@@ -13,18 +16,15 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
+@RequiredArgsConstructor
 public class OneTimeTokenAccountSaveRegistrationAction extends AbstractAction {
     private final OneTimeTokenCredentialRepository repository;
 
-    public OneTimeTokenAccountSaveRegistrationAction(final OneTimeTokenCredentialRepository repository) {
-        this.repository = repository;
-    }
-
     @Override
     protected Event doExecute(final RequestContext requestContext) {
-        final OneTimeTokenAccount account = requestContext.getFlowScope().get("key", OneTimeTokenAccount.class);
+        val account = requestContext.getFlowScope().get("key", OneTimeTokenAccount.class);
 
-        final String uid = WebUtils.getAuthentication(requestContext).getPrincipal().getId();
+        val uid = WebUtils.getAuthentication(requestContext).getPrincipal().getId();
         repository.save(uid, account.getSecretKey(), account.getValidationCode(), account.getScratchCodes());
         return success();
     }

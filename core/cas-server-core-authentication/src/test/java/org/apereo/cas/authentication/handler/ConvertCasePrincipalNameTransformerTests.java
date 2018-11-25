@@ -2,6 +2,8 @@ package org.apereo.cas.authentication.handler;
 
 import org.apereo.cas.util.transforms.ConvertCasePrincipalNameTransformer;
 import org.apereo.cas.util.transforms.PrefixSuffixPrincipalNameTransformer;
+
+import lombok.val;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -16,27 +18,27 @@ public class ConvertCasePrincipalNameTransformerTests {
 
     @Test
     public void verifyUpperCaseTransformerWithTrimAndDelegate() {
-        final PrefixSuffixPrincipalNameTransformer suffixTrans = new PrefixSuffixPrincipalNameTransformer();
+        val suffixTrans = new PrefixSuffixPrincipalNameTransformer();
         suffixTrans.setPrefix("a");
         suffixTrans.setSuffix("z");
-        final ConvertCasePrincipalNameTransformer transformer = new ConvertCasePrincipalNameTransformer();
+        val transformer = new ConvertCasePrincipalNameTransformer();
         transformer.setToUpperCase(true);
-        final String result = transformer.transform(suffixTrans.transform("   uid  "));
+        val result = transformer.transform(suffixTrans.transform("   uid  "));
         assertEquals("A   UID  Z", result);
     }
 
     @Test
     public void verifyUpperCaseTransformerWithTrim() {
-        final ConvertCasePrincipalNameTransformer transformer = new ConvertCasePrincipalNameTransformer();
+        val transformer = new ConvertCasePrincipalNameTransformer();
         transformer.setToUpperCase(true);
-        final String result = transformer.transform("   uid  ");
+        val result = transformer.transform("   uid  ");
         assertEquals("UID", result);
     }
 
     @Test
     public void verifyLowerCaseTransformerWithTrim() {
-        final ConvertCasePrincipalNameTransformer transformer = new ConvertCasePrincipalNameTransformer();
-        final String result = transformer.transform("   UID  ");
+        val transformer = new ConvertCasePrincipalNameTransformer();
+        val result = transformer.transform("   UID  ");
         assertEquals("uid", result);
     }
 }

@@ -1,5 +1,6 @@
 package org.apereo.cas.validation;
 
+import lombok.val;
 import org.junit.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 
@@ -13,14 +14,14 @@ public class Cas10ProtocolValidationSpecificationTests {
 
     @Test
     public void verifyRenewGettersAndSettersFalse() {
-        final Cas10ProtocolValidationSpecification s = new Cas10ProtocolValidationSpecification();
+        val s = new Cas10ProtocolValidationSpecification();
         s.setRenew(false);
         assertFalse(s.isRenew());
     }
 
     @Test
     public void verifyRenewGettersAndSettersTrue() {
-        final Cas10ProtocolValidationSpecification s = new Cas10ProtocolValidationSpecification();
+        val s = new Cas10ProtocolValidationSpecification();
         s.setRenew(true);
         assertTrue(s.isRenew());
     }
@@ -38,25 +39,25 @@ public class Cas10ProtocolValidationSpecificationTests {
     @Test
     public void verifySatisfiesSpecOfTrue() {
         assertTrue(new Cas10ProtocolValidationSpecification(true).isSatisfiedBy(CoreValidationTestUtils.getAssertion(true),
-                new MockHttpServletRequest()));
+            new MockHttpServletRequest()));
     }
 
     @Test
     public void verifyNotSatisfiesSpecOfTrue() {
         assertFalse(new Cas10ProtocolValidationSpecification(true).isSatisfiedBy(CoreValidationTestUtils.getAssertion(false),
-                new MockHttpServletRequest()));
+            new MockHttpServletRequest()));
     }
 
     @Test
     public void verifySatisfiesSpecOfFalse() {
         assertTrue(new Cas10ProtocolValidationSpecification(false).isSatisfiedBy(CoreValidationTestUtils.getAssertion(true),
-                new MockHttpServletRequest()));
+            new MockHttpServletRequest()));
     }
 
     @Test
     public void verifySatisfiesSpecOfFalse2() {
         assertTrue(new Cas10ProtocolValidationSpecification(false).isSatisfiedBy(CoreValidationTestUtils.getAssertion(false),
-                new MockHttpServletRequest()));
+            new MockHttpServletRequest()));
     }
 
 }

@@ -1,6 +1,7 @@
 ---
 layout: default
 title: CAS - Releasing Principal Id
+category: Attributes
 ---
 
 # Principal-Id Attribute
@@ -126,7 +127,7 @@ Scripts will receive and have access to the following variable bindings:
   "id" : 500,
   "description" : "sample",
   "usernameAttributeProvider" : {
-    "@class" : "org.apereo.cas.services.GroovyRegisteredServiceUsernameProvider",
+    "@class" : "org.apereo.cas.services.ScriptedRegisteredServiceUsernameProvider",
     "script" : "file:/etc/cas/sampleService.[groovy|js|.py]",
     "canonicalizationMode" : "UPPER"
   }
@@ -142,6 +143,14 @@ def run(Object[] args) {
     def logger = args[2]
     logger.info("Testing username attribute")
     return "test"
+}
+```
+
+Sample javascript function follows:
+
+```javascript
+function run(uid, logger) {
+   return "test"
 }
 ```
 
@@ -224,3 +233,13 @@ The generated id may be based off of an existing principal attribute. If left un
   }
 }
 ```
+
+To simulate the behavior, you may also try the following command:
+
+```bash
+perl -e 'use Digest::SHA qw(sha1_base64); \
+    $digest = sha1_base64("$SERVICE!$USER!$SALT"); \
+    $eqn = length($digest) % 4; print $digest; print "=" x (4-$eqn) . "\n"' 
+```
+
+Replace `$SERVICE` (the url of the application under test), `$USER` and `$SALT` with the appropriate values for the test.

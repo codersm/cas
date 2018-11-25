@@ -3,6 +3,7 @@ package org.apereo.cas.authentication;
 import org.apereo.cas.authentication.principal.PrincipalResolver;
 
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -29,7 +30,7 @@ public interface AuthenticationEventExecutionPlan {
      *
      * @param populator the populator
      */
-    void registerMetadataPopulator(AuthenticationMetaDataPopulator populator);
+    void registerAuthenticationMetadataPopulator(AuthenticationMetaDataPopulator populator);
 
     /**
      * Register authentication post processor.
@@ -39,11 +40,32 @@ public interface AuthenticationEventExecutionPlan {
     void registerAuthenticationPostProcessor(AuthenticationPostProcessor processor);
 
     /**
+     * Register authentication pre processor.
+     *
+     * @param processor the populator
+     */
+    void registerAuthenticationPreProcessor(AuthenticationPreProcessor processor);
+
+    /**
      * Register metadata populators.
      *
      * @param populator the populator
      */
-    void registerMetadataPopulators(Collection<AuthenticationMetaDataPopulator> populator);
+    void registerAuthenticationMetadataPopulators(Collection<AuthenticationMetaDataPopulator> populator);
+
+    /**
+     * Register authentication policy.
+     *
+     * @param authenticationPolicy the authentication policy
+     */
+    void registerAuthenticationPolicy(AuthenticationPolicy authenticationPolicy);
+
+    /**
+     * Register authentication handler resolver.
+     *
+     * @param handlerResolver the handler resolver
+     */
+    void registerAuthenticationHandlerResolver(AuthenticationHandlerResolver handlerResolver);
 
     /**
      * Register authentication handler with principal resolver.
@@ -69,12 +91,27 @@ public interface AuthenticationEventExecutionPlan {
     void registerAuthenticationHandlerWithPrincipalResolvers(Collection<AuthenticationHandler> handlers, PrincipalResolver principalResolver);
 
     /**
+     * Register authentication handler with principal resolvers.
+     *
+     * @param handlers          the handlers
+     * @param principalResolver the principal resolver
+     */
+    void registerAuthenticationHandlerWithPrincipalResolvers(List<AuthenticationHandler> handlers, List<PrincipalResolver> principalResolver);
+
+    /**
      * Gets authentication handlers for transaction.
      *
      * @param transaction the transaction
      * @return the authentication handlers for transaction
      */
     Set<AuthenticationHandler> getAuthenticationHandlersForTransaction(AuthenticationTransaction transaction);
+
+    /**
+     * Gets authentication handlers.
+     *
+     * @return the authentication handlers
+     */
+    Set<AuthenticationHandler> getAuthenticationHandlers();
 
     /**
      * Gets authentication metadata populators.
@@ -91,7 +128,15 @@ public interface AuthenticationEventExecutionPlan {
      * @return the authentication metadata populators
      */
     Collection<AuthenticationPostProcessor> getAuthenticationPostProcessors(AuthenticationTransaction transaction);
-    
+
+    /**
+     * Gets authentication pre processors.
+     *
+     * @param transaction the transaction
+     * @return the authentication metadata populators
+     */
+    Collection<AuthenticationPreProcessor> getAuthenticationPreProcessors(AuthenticationTransaction transaction);
+
     /**
      * Gets principal resolver for authentication transaction.
      *
@@ -100,4 +145,20 @@ public interface AuthenticationEventExecutionPlan {
      * @return the principal resolver for authentication transaction
      */
     PrincipalResolver getPrincipalResolverForAuthenticationTransaction(AuthenticationHandler handler, AuthenticationTransaction transaction);
+
+    /**
+     * Gets authentication policies.
+     *
+     * @param transaction the transaction
+     * @return the authentication policies
+     */
+    Collection<AuthenticationPolicy> getAuthenticationPolicies(AuthenticationTransaction transaction);
+
+    /**
+     * Gets authentication handler resolvers.
+     *
+     * @param transaction the transaction
+     * @return the authentication handler resolvers
+     */
+    Collection<AuthenticationHandlerResolver> getAuthenticationHandlerResolvers(AuthenticationTransaction transaction);
 }

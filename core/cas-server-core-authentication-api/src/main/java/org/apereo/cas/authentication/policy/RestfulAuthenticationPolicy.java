@@ -1,19 +1,21 @@
 package org.apereo.cas.authentication.policy;
 
 import org.apereo.cas.authentication.Authentication;
+import org.apereo.cas.authentication.AuthenticationHandler;
 import org.apereo.cas.authentication.AuthenticationPolicy;
 import org.apereo.cas.authentication.exceptions.AccountDisabledException;
 import org.apereo.cas.authentication.exceptions.AccountPasswordMustChangeException;
 import org.apereo.cas.authentication.principal.Principal;
 import org.apereo.cas.util.CollectionUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
@@ -22,6 +24,7 @@ import javax.security.auth.login.AccountLockedException;
 import javax.security.auth.login.AccountNotFoundException;
 import javax.security.auth.login.FailedLoginException;
 import java.security.GeneralSecurityException;
+import java.util.Set;
 
 /**
  * This is {@link RestfulAuthenticationPolicy}.
@@ -29,41 +32,34 @@ import java.security.GeneralSecurityException;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
+@RequiredArgsConstructor
 public class RestfulAuthenticationPolicy implements AuthenticationPolicy {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RestfulAuthenticationPolicy.class);
-
-    private final RestTemplate restTemplate;
+    private final transient RestTemplate restTemplate;
     private final String endpoint;
 
-    public RestfulAuthenticationPolicy(final RestTemplate restTemplate, final String endpoint) {
-        this.restTemplate = restTemplate;
-        this.endpoint = endpoint;
-    }
-
     @Override
-    public boolean isSatisfiedBy(final Authentication authentication) throws Exception {
+    public boolean isSatisfiedBy(final Authentication authentication, final Set<AuthenticationHandler> authenticationHandlers) throws Exception {
+        val principal = authentication.getPrincipal();
         try {
-            final HttpHeaders acceptHeaders = new HttpHeaders();
+            val acceptHeaders = new HttpHeaders();
             acceptHeaders.setAccept(CollectionUtils.wrap(MediaType.APPLICATION_JSON));
-            final HttpEntity<Principal> entity = new HttpEntity<>(authentication.getPrincipal(), acceptHeaders);
-            LOGGER.warn("Checking authentication policy for [{}] via POST at [{}]", authentication.getPrincipal(), this.endpoint);
-            final ResponseEntity<String> resp = restTemplate.exchange(this.endpoint, HttpMethod.POST, entity, String.class);
-            if (resp == null) {
-                LOGGER.warn("[{}] returned no responses", this.endpoint);
-                throw new GeneralSecurityException("No response returned from REST endpoint to determine authentication policy");
-            }
-            if (resp.getStatusCode() != HttpStatus.OK) {
-                final Exception ex = handleResponseStatusCode(resp.getStatusCode(), authentication.getPrincipal());
+            val entity = new HttpEntity<Principal>(principal, acceptHeaders);
+            LOGGER.warn("Checking authentication policy for [{}] via POST at [{}]", principal, this.endpoint);
+            val resp = restTemplate.exchange(this.endpoint, HttpMethod.POST, entity, String.class);
+            val statusCode = resp.getStatusCode();
+            if (statusCode != HttpStatus.OK) {
+                val ex = handleResponseStatusCode(statusCode, principal);
                 throw new GeneralSecurityException(ex);
             }
             return true;
         } catch (final HttpClientErrorException e) {
-            final Exception ex = handleResponseStatusCode(e.getStatusCode(), authentication.getPrincipal());
+            val ex = handleResponseStatusCode(e.getStatusCode(), authentication.getPrincipal());
             throw new GeneralSecurityException(ex);
         }
     }
 
-    private Exception handleResponseStatusCode(final HttpStatus statusCode, final Principal p) {
+    private static Exception handleResponseStatusCode(final HttpStatus statusCode, final Principal p) {
         if (statusCode == HttpStatus.FORBIDDEN || statusCode == HttpStatus.METHOD_NOT_ALLOWED) {
             return new AccountDisabledException("Could not authenticate forbidden account for " + p.getId());
         }

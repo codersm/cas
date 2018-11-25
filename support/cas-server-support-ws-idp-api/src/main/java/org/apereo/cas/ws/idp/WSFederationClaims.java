@@ -1,7 +1,9 @@
 package org.apereo.cas.ws.idp;
 
-import org.apache.commons.lang3.EnumUtils;
 import org.apereo.cas.util.CollectionUtils;
+
+import lombok.Getter;
+import org.apache.commons.lang3.EnumUtils;
 
 import java.util.List;
 
@@ -11,7 +13,9 @@ import java.util.List;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Getter
 public enum WSFederationClaims {
+
     /**
      * Claims email address 2005 claim type constants.
      */
@@ -104,29 +108,11 @@ public enum WSFederationClaims {
     /**
      * All claims.
      */
-    public static final List<WSFederationClaims> ALL_CLAIMS =
-            CollectionUtils.wrapList(EMAIL_ADDRESS_2005,
-                    EMAIL_ADDRESS,
-                    GIVEN_NAME,
-                    NAME,
-                    USER_PRINCIPAL_NAME_2005,
-                    USER_PRINCIPAL_NAME,
-                    COMMON_NAME,
-                    GROUP,
-                    ROLE,
-                    MS_ROLE,
-                    SURNAME,
-                    PRIVATE_ID,
-                    NAME_IDENTIFIER,
-                    AUTHENTICATION_METHOD,
-                    DENY_ONLY_GROUP_SID,
-                    DENY_ONLY_PRIMARY_SID,
-                    DENY_ONLY_PRIMARY_GROUP_SID,
-                    GROUP_SID,
-                    PRIMARY_GROUP_SID,
-                    PRIMARY_SID,
-                    WINDOWS_ACCOUNT_NAME,
-                    PUID);
+    public static final List<WSFederationClaims> ALL_CLAIMS = CollectionUtils.wrapList(EMAIL_ADDRESS_2005, EMAIL_ADDRESS,
+        GIVEN_NAME, NAME, USER_PRINCIPAL_NAME_2005, USER_PRINCIPAL_NAME, COMMON_NAME, GROUP, ROLE,
+        MS_ROLE, SURNAME, PRIVATE_ID, NAME_IDENTIFIER, AUTHENTICATION_METHOD, DENY_ONLY_GROUP_SID,
+        DENY_ONLY_PRIMARY_SID, DENY_ONLY_PRIMARY_GROUP_SID, GROUP_SID, PRIMARY_GROUP_SID, PRIMARY_SID,
+        WINDOWS_ACCOUNT_NAME, PUID);
 
     /**
      * The Uri.
@@ -140,15 +126,6 @@ public enum WSFederationClaims {
      */
     WSFederationClaims(final String str) {
         this.uri = str;
-    }
-
-    /**
-     * Gets uri.
-     *
-     * @return the uri
-     */
-    public String getUri() {
-        return uri;
     }
 
     /**

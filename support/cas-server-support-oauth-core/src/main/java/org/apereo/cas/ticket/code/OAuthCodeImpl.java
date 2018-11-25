@@ -1,7 +1,5 @@
 package org.apereo.cas.ticket.code;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.ticket.AbstractTicket;
@@ -9,7 +7,12 @@ import org.apereo.cas.ticket.ExpirationPolicy;
 import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.TicketGrantingTicketImpl;
 import org.apereo.cas.ticket.proxy.ProxyGrantingTicket;
-import org.springframework.util.Assert;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import org.apache.commons.lang3.ObjectUtils;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
@@ -31,6 +34,8 @@ import java.util.HashSet;
 @Table(name = "OAUTH_TOKENS")
 @DiscriminatorColumn(name = "TYPE")
 @DiscriminatorValue(OAuthCode.PREFIX)
+@NoArgsConstructor
+@Getter
 public class OAuthCodeImpl extends AbstractTicket implements OAuthCode {
 
     private static final long serialVersionUID = -8072724186202305800L;
@@ -43,7 +48,7 @@ public class OAuthCodeImpl extends AbstractTicket implements OAuthCode {
      * The {@link TicketGrantingTicket} this is associated with.
      */
     @ManyToOne(targetEntity = TicketGrantingTicketImpl.class)
-    @JsonProperty("grantingTicket")
+    @JsonProperty("ticketGrantingTicket")
     private TicketGrantingTicket ticketGrantingTicket;
 
     /**
@@ -57,48 +62,35 @@ public class OAuthCodeImpl extends AbstractTicket implements OAuthCode {
      * The authenticated object for which this ticket was generated for.
      */
     @Lob
-    @Column(name = "AUTHENTICATION", nullable = false, length = 1000000)
+    @Column(name = "AUTHENTICATION", nullable = false, length = Integer.MAX_VALUE)
     private Authentication authentication;
 
-    /**
-     * Instantiates a new OAuth code impl.
-     */
-    public OAuthCodeImpl() {
-        // exists for JPA purposes
-    }
+    @Column(name = "code_challenge")
+    private String codeChallenge;
 
-    /**
-     * Constructs a new OAuth code with unique id for a service and authentication.
-     *
-     * @param id                   the unique identifier for the ticket.
-     * @param service              the service this ticket is for.
-     * @param authentication       the authentication.
-     * @param expirationPolicy     the expiration policy.
-     * @param ticketGrantingTicket the ticket granting ticket
-     * @param scopes               the scopes
-     * @throws IllegalArgumentException if the service or authentication are null.
-     */
-    public OAuthCodeImpl(final String id, final Service service, final Authentication authentication,
-                         final ExpirationPolicy expirationPolicy, final TicketGrantingTicket ticketGrantingTicket,
-                         final Collection<String> scopes) {
+    @Column(name = "code_challenge_method")
+    private String codeChallengeMethod;
+
+    public OAuthCodeImpl(final String id,
+                         final @NonNull Service service,
+                         final @NonNull Authentication authentication,
+                         final ExpirationPolicy expirationPolicy,
+                         final TicketGrantingTicket ticketGrantingTicket,
+                         final Collection<String> scopes,
+                         final String codeChallenge,
+                         final String codeChallengeMethod) {
         super(id, expirationPolicy);
-
-        Assert.notNull(service, "service cannot be null");
-        Assert.notNull(authentication, "authentication cannot be null");
         this.service = service;
         this.authentication = authentication;
         this.ticketGrantingTicket = ticketGrantingTicket;
         this.scopes.addAll(scopes);
+        this.codeChallenge = codeChallenge;
+        this.codeChallengeMethod = codeChallengeMethod;
     }
 
     @Override
     public boolean isFromNewLogin() {
         return true;
-    }
-
-    @Override
-    public Service getService() {
-        return this.service;
     }
 
     @Override
@@ -108,20 +100,8 @@ public class OAuthCodeImpl extends AbstractTicket implements OAuthCode {
     }
 
     @Override
-    public ProxyGrantingTicket grantProxyGrantingTicket(
-        final String id, final Authentication authentication,
-        final ExpirationPolicy expirationPolicy) {
+    public ProxyGrantingTicket grantProxyGrantingTicket(final String id, final Authentication authentication, final ExpirationPolicy expirationPolicy) {
         throw new UnsupportedOperationException("No PGT grant is available in OAuth");
-    }
-
-    @Override
-    public Authentication getAuthentication() {
-        return this.authentication;
-    }
-
-    @Override
-    public TicketGrantingTicket getGrantingTicket() {
-        return this.ticketGrantingTicket;
     }
 
     @Override

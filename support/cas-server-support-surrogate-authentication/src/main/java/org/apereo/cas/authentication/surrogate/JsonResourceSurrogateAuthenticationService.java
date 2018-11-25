@@ -1,7 +1,8 @@
 package org.apereo.cas.authentication.surrogate;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apereo.cas.services.ServicesManager;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.core.io.Resource;
 
 import java.io.File;

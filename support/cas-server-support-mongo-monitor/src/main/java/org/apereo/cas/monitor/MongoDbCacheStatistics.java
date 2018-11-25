@@ -2,10 +2,11 @@ package org.apereo.cas.monitor;
 
 import com.mongodb.CommandResult;
 import com.mongodb.DBCollection;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.hjson.JsonValue;
 import org.hjson.Stringify;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.StringWriter;
 
@@ -15,12 +16,11 @@ import java.io.StringWriter;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
+@ToString
 public class MongoDbCacheStatistics implements CacheStatistics {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbCacheStatistics.class);
-
     private final DBCollection collection;
     private final CommandResult statistics;
-
 
     public MongoDbCacheStatistics(final DBCollection collection) {
         this.collection = collection;
@@ -29,7 +29,7 @@ public class MongoDbCacheStatistics implements CacheStatistics {
 
     @Override
     public long getSize() {
-        return statistics.getLong("objects");
+        return statistics.getLong("size");
     }
 
     @Override
@@ -38,26 +38,25 @@ public class MongoDbCacheStatistics implements CacheStatistics {
     }
 
     @Override
+    public long getPercentFree() {
+        return getCapacity() - statistics.getLong("totalIndexSize");
+    }
+
+    @Override
     public String getName() {
         return this.collection.getName();
     }
 
     @Override
-    public void toString(final StringBuilder builder) {
+    public String toString(final StringBuilder builder) {
         try {
-            final JsonValue json = JsonValue.readJSON(this.statistics.toString());
-            final StringWriter writer = new StringWriter();
+            val json = JsonValue.readJSON(this.statistics.toString());
+            val writer = new StringWriter();
             json.writeTo(writer, Stringify.FORMATTED);
             builder.append(writer.toString());
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
-    }
-
-    @Override
-    public String toString() {
-        final StringBuilder builder = new StringBuilder();
-        this.toString(builder);
         return builder.toString();
     }
 }

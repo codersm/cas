@@ -10,8 +10,10 @@ import org.apereo.cas.ticket.TicketFactory;
 import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.UniqueTicketIdGenerator;
 import org.apereo.cas.util.DefaultUniqueTicketIdGenerator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 import java.util.Map;
 
@@ -22,40 +24,27 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 4.2
  */
+@Slf4j
+@RequiredArgsConstructor
 public class DefaultServiceTicketFactory implements ServiceTicketFactory {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultServiceTicketFactory.class);
-
-    /**
-     * The Cipher executor.
-     */
-    protected CipherExecutor<String, String> cipherExecutor;
-
-    private final UniqueTicketIdGenerator defaultServiceTicketIdGenerator = new DefaultUniqueTicketIdGenerator();
-    private final Map<String, UniqueTicketIdGenerator> uniqueTicketIdGeneratorsForService;
     private final ExpirationPolicy serviceTicketExpirationPolicy;
+    private final Map<String, UniqueTicketIdGenerator> uniqueTicketIdGeneratorsForService;
+    private final boolean trackMostRecentSession;
+    private final CipherExecutor<String, String> cipherExecutor;
+    private final UniqueTicketIdGenerator defaultServiceTicketIdGenerator = new DefaultUniqueTicketIdGenerator();
 
-    private boolean trackMostRecentSession = true;
-
-    public DefaultServiceTicketFactory(final ExpirationPolicy serviceTicketExpirationPolicy,
-                                       final Map<String, UniqueTicketIdGenerator> ticketIdGeneratorMap,
-                                       final boolean onlyTrackMostRecentSession, final CipherExecutor cipherExecutor) {
-        this.serviceTicketExpirationPolicy = serviceTicketExpirationPolicy;
-        this.uniqueTicketIdGeneratorsForService = ticketIdGeneratorMap;
-        this.trackMostRecentSession = onlyTrackMostRecentSession;
-        this.cipherExecutor = cipherExecutor;
-    }
 
     @Override
     public <T extends Ticket> T create(final TicketGrantingTicket ticketGrantingTicket, final Service service,
                                        final boolean credentialProvided, final Class<T> clazz) {
-        String ticketId = produceTicketIdentifier(service, ticketGrantingTicket, credentialProvided);
-        if (this.cipherExecutor != null) {
-            LOGGER.debug("Attempting to encode service ticket [{}]", ticketId);
-            ticketId = this.cipherExecutor.encode(ticketId);
-            LOGGER.debug("Encoded service ticket id [{}]", ticketId);
+        val ticketId = produceTicketIdentifier(service, ticketGrantingTicket, credentialProvided);
+        if (this.cipherExecutor == null) {
+            return produceTicket(ticketGrantingTicket, service, credentialProvided, ticketId, clazz);
         }
-        return produceTicket(ticketGrantingTicket, service, credentialProvided, ticketId, clazz);
+        LOGGER.debug("Attempting to encode service ticket [{}]", ticketId);
+        val encodedId = this.cipherExecutor.encode(ticketId);
+        LOGGER.debug("Encoded service ticket id [{}]", encodedId);
+        return produceTicket(ticketGrantingTicket, service, credentialProvided, encodedId, clazz);
     }
 
     /**
@@ -71,12 +60,12 @@ public class DefaultServiceTicketFactory implements ServiceTicketFactory {
      */
     protected <T extends Ticket> T produceTicket(final TicketGrantingTicket ticketGrantingTicket, final Service service,
                                                  final boolean credentialProvided, final String ticketId, final Class<T> clazz) {
-        final ServiceTicket result = ticketGrantingTicket.grantServiceTicket(
-                ticketId,
-                service,
-                this.serviceTicketExpirationPolicy,
-                credentialProvided,
-                trackMostRecentSession);
+        val result = ticketGrantingTicket.grantServiceTicket(
+            ticketId,
+            service,
+            this.serviceTicketExpirationPolicy,
+            credentialProvided,
+            trackMostRecentSession);
 
         if (!clazz.isAssignableFrom(result.getClass())) {
             throw new ClassCastException("Result [" + result
@@ -92,20 +81,19 @@ public class DefaultServiceTicketFactory implements ServiceTicketFactory {
      * @param service              the service
      * @param ticketGrantingTicket the ticket granting ticket
      * @param credentialProvided   whether credentials where directly provided
-     * @return the tI don't knowet id
+     * @return ticket id
      */
     protected String produceTicketIdentifier(final Service service, final TicketGrantingTicket ticketGrantingTicket,
                                              final boolean credentialProvided) {
-        final String uniqueTicketIdGenKey = service.getClass().getName();
-        UniqueTicketIdGenerator serviceTicketUniqueTicketIdGenerator = null;
+        val uniqueTicketIdGenKey = service.getClass().getName();
+        var serviceTicketUniqueTicketIdGenerator = (UniqueTicketIdGenerator) null;
         if (this.uniqueTicketIdGeneratorsForService != null && !this.uniqueTicketIdGeneratorsForService.isEmpty()) {
             LOGGER.debug("Looking up service ticket id generator for [{}]", uniqueTicketIdGenKey);
             serviceTicketUniqueTicketIdGenerator = this.uniqueTicketIdGeneratorsForService.get(uniqueTicketIdGenKey);
         }
         if (serviceTicketUniqueTicketIdGenerator == null) {
             serviceTicketUniqueTicketIdGenerator = this.defaultServiceTicketIdGenerator;
-            LOGGER.debug("Service ticket id generator not found for [{}]. Using the default generator...",
-                    uniqueTicketIdGenKey);
+            LOGGER.debug("Service ticket id generator not found for [{}]. Using the default generator.", uniqueTicketIdGenKey);
         }
 
         return serviceTicketUniqueTicketIdGenerator.getNewTicketId(ServiceTicket.PREFIX);

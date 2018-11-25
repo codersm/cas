@@ -1,5 +1,11 @@
 package org.apereo.cas.adaptors.x509.util;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+import lombok.val;
+
+import javax.security.auth.x500.X500Principal;
 import java.math.BigInteger;
 import java.security.Principal;
 import java.security.PublicKey;
@@ -10,66 +16,42 @@ import java.security.cert.X509Certificate;
 import java.util.Date;
 import java.util.Set;
 
-import javax.security.auth.x500.X500Principal;
-
-
 /**
  * Mock implementation of X.509 CRL.
  *
  * @author Marvin S. Addison
  * @since 3.4.6
- *
  */
+@ToString
+@Getter
+@RequiredArgsConstructor
 public class MockX509CRL extends X509CRL {
-    /** Issuer name */
+
+    /**
+     * Issuer name
+     */
     private final X500Principal issuer;
 
-    /** Instant CRL was issued. */
+    /**
+     * Instant CRL was issued.
+     */
     private final Date thisUpdate;
 
-    /** Instant on which next CRL update expected. */
+    /**
+     * Instant on which next CRL update expected.
+     */
     private final Date nextUpdate;
 
-    /**
-     * Creates a new instance with given parameters.
-     *
-     * @param issuer CRL issuer.
-     * @param thisUpdate Instant CRL was issued.
-     * @param nextUpdate Instant where next CRL update is expected.
-     */
-    public MockX509CRL(final X500Principal issuer, final Date thisUpdate, final Date nextUpdate) {
-        this.issuer = issuer;
-        this.thisUpdate = thisUpdate;
-        this.nextUpdate = nextUpdate;
-    }
-
-    /**
-     * @see java.security.cert.X509Extension#getCriticalExtensionOIDs()
-     */
-    @Override
-    public Set<String> getCriticalExtensionOIDs() {
-        return null;
-    }
-
-    /**
-     * @see java.security.cert.X509Extension#getExtensionValue(java.lang.String)
-     */
     @Override
     public byte[] getExtensionValue(final String oid) {
         return null;
     }
 
-    /**
-     * @see java.security.cert.X509Extension#getNonCriticalExtensionOIDs()
-     */
     @Override
-    public Set<String> getNonCriticalExtensionOIDs() {
+    public Set<String> getCriticalExtensionOIDs() {
         return null;
     }
 
-    /**
-     * @see java.security.cert.X509Extension#hasUnsupportedCriticalExtension()
-     */
     @Override
     public boolean hasUnsupportedCriticalExtension() {
         return false;
@@ -86,8 +68,8 @@ public class MockX509CRL extends X509CRL {
     }
 
     @Override
-    public Date getNextUpdate() {
-        return this.nextUpdate;
+    public Set<String> getNonCriticalExtensionOIDs() {
+        return null;
     }
 
     @Override
@@ -151,18 +133,9 @@ public class MockX509CRL extends X509CRL {
     @Override
     public boolean isRevoked(final Certificate cert) {
         if (cert instanceof X509Certificate) {
-            final X509Certificate xcert = (X509Certificate) cert;
+            val xcert = (X509Certificate) cert;
             return getRevokedCertificates().stream().anyMatch(entry -> entry.getSerialNumber().equals(xcert.getSerialNumber()));
         }
         return false;
     }
-
-    /**
-     * @see java.security.cert.CRL#toString()
-     */
-    @Override
-    public String toString() {
-        return "MockX509CRL for " + this.issuer;
-    }
-
 }

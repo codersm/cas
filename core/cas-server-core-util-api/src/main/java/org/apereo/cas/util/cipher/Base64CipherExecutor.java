@@ -3,6 +3,10 @@ package org.apereo.cas.util.cipher;
 import org.apereo.cas.CipherExecutor;
 import org.apereo.cas.util.EncodingUtils;
 
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.val;
+
 import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
@@ -12,12 +16,11 @@ import java.nio.charset.StandardCharsets;
  * @author Misagh Moayyed
  * @since 5.1
  */
+@Getter
+@NoArgsConstructor
 public class Base64CipherExecutor extends AbstractCipherExecutor<Serializable, String> {
 
     private static CipherExecutor<Serializable, String> INSTANCE;
-
-    protected Base64CipherExecutor() {
-    }
 
     /**
      * Gets instance.
@@ -32,18 +35,13 @@ public class Base64CipherExecutor extends AbstractCipherExecutor<Serializable, S
     }
 
     @Override
-    public String encode(final Serializable value) {
+    public String encode(final Serializable value, final Object[] parameters) {
         return EncodingUtils.encodeBase64(value.toString().getBytes(StandardCharsets.UTF_8));
     }
 
     @Override
-    public String decode(final Serializable value) {
-        final byte[] decoded = EncodingUtils.decodeBase64(value.toString());
+    public String decode(final Serializable value, final Object[] parameters) {
+        val decoded = EncodingUtils.decodeBase64(value.toString());
         return new String(decoded, StandardCharsets.UTF_8);
-    }
-
-    @Override
-    public String getName() {
-        return null;
     }
 }

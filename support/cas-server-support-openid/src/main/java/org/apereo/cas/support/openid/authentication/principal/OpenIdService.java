@@ -1,9 +1,13 @@
 package org.apereo.cas.support.openid.authentication.principal;
 
+import org.apereo.cas.authentication.principal.AbstractWebApplicationService;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apereo.cas.authentication.principal.AbstractWebApplicationService;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorValue;
@@ -15,62 +19,22 @@ import javax.persistence.Entity;
  */
 @Entity
 @DiscriminatorValue("openid")
+@Getter
+@NoArgsConstructor
+@Setter
+@EqualsAndHashCode(callSuper = true)
 public class OpenIdService extends AbstractWebApplicationService {
 
     private static final long serialVersionUID = 5776500133123291301L;
 
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @Column(nullable = false)
     private String identity;
 
-    private OpenIdService() {}
-    /**
-     * Instantiates a new OpenID service.
-     *
-     * @param id              the id
-     * @param originalUrl     the original url
-     * @param artifactId      the artifact id
-     * @param identity        the OpenID identity
-     */
-
     @JsonCreator
-    protected OpenIdService(@JsonProperty("id") final String id,
-                            @JsonProperty("originalUrl") final String originalUrl,
-                            @JsonProperty("artifactId") final String artifactId,
-                            @JsonProperty("identity") final String identity) {
+    protected OpenIdService(@JsonProperty("id") final String id, @JsonProperty("originalUrl") final String originalUrl,
+                            @JsonProperty("artifactId") final String artifactId, @JsonProperty("identity") final String identity) {
         super(id, originalUrl, artifactId);
         this.identity = identity;
     }
-    
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder()
-                .append(this.identity)
-                .toHashCode();
-    }
 
-    @Override
-    public boolean equals(final Object obj) {
-        if (this == obj) {
-            return true;
-        }
-        if (!super.equals(obj)) {
-            return false;
-        }
-        if (getClass() != obj.getClass()) {
-            return false;
-        }
-        final OpenIdService other = (OpenIdService) obj;
-        if (this.identity == null) {
-            if (other.identity != null) {
-                return false;
-            }
-        } else if (!this.identity.equals(other.identity)) {
-            return false;
-        }
-        return true;
-    }
-
-    public String getIdentity() {
-        return this.identity;
-    }
 }

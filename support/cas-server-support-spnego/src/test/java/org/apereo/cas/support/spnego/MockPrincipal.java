@@ -1,5 +1,9 @@
 package org.apereo.cas.support.spnego;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.ToString;
+
 import java.security.Principal;
 
 /**
@@ -7,18 +11,9 @@ import java.security.Principal;
  * @author Arnaud Lesueur
  * @since 3.1
  */
+@Getter
+@RequiredArgsConstructor
+@ToString
 public class MockPrincipal implements Principal {
-
-    private final String principal;
-
-    public MockPrincipal(final String principal) {
-        super();
-        this.principal = principal;
-    }
-
-    @Override
-    public String getName() {
-        return this.principal;
-    }
-
+    private final String name;
 }

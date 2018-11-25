@@ -1,14 +1,18 @@
-
 package org.apereo.cas.support.saml.services.idp.metadata;
 
-import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
-import org.apache.commons.lang3.ObjectUtils;
 import org.apereo.cas.support.saml.SamlIdPUtils;
 import org.apereo.cas.support.saml.services.SamlRegisteredService;
 import org.apereo.cas.support.saml.services.idp.metadata.cache.SamlRegisteredServiceCachingMetadataResolver;
 import org.apereo.cas.util.DateTimeUtils;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import net.shibboleth.utilities.java.support.resolver.CriteriaSet;
+import org.apache.commons.lang3.ObjectUtils;
 import org.opensaml.core.criterion.EntityIdCriterion;
-import org.opensaml.core.xml.XMLObject;
 import org.opensaml.saml.common.xml.SAMLConstants;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
 import org.opensaml.saml.saml2.core.RequestAbstractType;
@@ -22,8 +26,6 @@ import org.opensaml.saml.saml2.metadata.Organization;
 import org.opensaml.saml.saml2.metadata.SPSSODescriptor;
 import org.opensaml.saml.saml2.metadata.SingleLogoutService;
 import org.opensaml.xmlsec.signature.Signature;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.time.ZonedDateTime;
 import java.util.ArrayList;
@@ -41,20 +43,14 @@ import java.util.stream.Collectors;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-public final class SamlRegisteredServiceServiceProviderMetadataFacade {
-    private static final Logger LOGGER = LoggerFactory.getLogger(SamlRegisteredServiceServiceProviderMetadataFacade.class);
+@Slf4j
+@RequiredArgsConstructor
+@Getter
+public class SamlRegisteredServiceServiceProviderMetadataFacade {
 
     private final SPSSODescriptor ssoDescriptor;
     private final EntityDescriptor entityDescriptor;
     private final MetadataResolver metadataResolver;
-
-    private SamlRegisteredServiceServiceProviderMetadataFacade(final SPSSODescriptor ssoDescriptor,
-                                                               final EntityDescriptor entityDescriptor,
-                                                               final MetadataResolver metadataResolver) {
-        this.ssoDescriptor = ssoDescriptor;
-        this.entityDescriptor = entityDescriptor;
-        this.metadataResolver = metadataResolver;
-    }
 
     /**
      * Adapt saml metadata and parse. Acts as a facade.
@@ -81,66 +77,58 @@ public final class SamlRegisteredServiceServiceProviderMetadataFacade {
     public static Optional<SamlRegisteredServiceServiceProviderMetadataFacade> get(final SamlRegisteredServiceCachingMetadataResolver resolver,
                                                                                    final SamlRegisteredService registeredService,
                                                                                    final RequestAbstractType request) {
-        return get(resolver, registeredService, SamlIdPUtils.getIssuerFromSamlRequest(request));
+        return get(resolver, registeredService, SamlIdPUtils.getIssuerFromSamlObject(request));
     }
 
+    @SneakyThrows
     private static Optional<SamlRegisteredServiceServiceProviderMetadataFacade> get(final SamlRegisteredServiceCachingMetadataResolver resolver,
                                                                                     final SamlRegisteredService registeredService,
                                                                                     final String entityID,
                                                                                     final CriteriaSet criterions) {
-        LOGGER.info("Adapting SAML metadata for CAS service [{}] issued by [{}]", registeredService.getName(), entityID);
-        try {
-            criterions.add(new EntityIdCriterion(entityID), true);
-            LOGGER.info("Locating metadata for entityID [{}] by attempting to run through the metadata chain...", entityID);
-            final MetadataResolver chainingMetadataResolver = resolver.resolve(registeredService);
-            LOGGER.info("Resolved metadata chain for service [{}]. Filtering the chain by entity ID [{}]",
-                    registeredService.getServiceId(), entityID);
+        LOGGER.debug("Adapting SAML metadata for CAS service [{}] issued by [{}]", registeredService.getName(), entityID);
 
-            final EntityDescriptor entityDescriptor = chainingMetadataResolver.resolveSingle(criterions);
-            if (entityDescriptor == null) {
-                LOGGER.warn("Cannot find entity [{}] in metadata provider Ensure the metadata is valid and has not expired.", entityID);
-                return Optional.empty();
-            }
-            LOGGER.debug("Located entity descriptor in metadata for [{}]", entityID);
+        criterions.add(new EntityIdCriterion(entityID), true);
+        LOGGER.debug("Locating metadata for entityID [{}] by attempting to run through the metadata chain...", entityID);
+        val chainingMetadataResolver = resolver.resolve(registeredService);
+        LOGGER.info("Resolved metadata chain for service [{}]. Filtering the chain by entity ID [{}]",
+            registeredService.getServiceId(), entityID);
 
-            if (entityDescriptor.getValidUntil() != null && entityDescriptor.getValidUntil().isBeforeNow()) {
-                LOGGER.warn("Entity descriptor in the metadata has expired at [{}]", entityDescriptor.getValidUntil());
-                return Optional.empty();
-            }
-
-            return getServiceProviderSsoDescriptor(entityID, chainingMetadataResolver, entityDescriptor);
-        } catch (final Exception e) {
-            throw new IllegalArgumentException(e.getMessage(), e);
+        val entityDescriptor = chainingMetadataResolver.resolveSingle(criterions);
+        if (entityDescriptor == null) {
+            LOGGER.warn("Cannot find entity [{}] in metadata provider Ensure the metadata is valid and has not expired.", entityID);
+            return Optional.empty();
         }
+        LOGGER.trace("Located entity descriptor in metadata for [{}]", entityID);
+
+        if (entityDescriptor.getValidUntil() != null && entityDescriptor.getValidUntil().isBeforeNow()) {
+            LOGGER.warn("Entity descriptor in the metadata has expired at [{}]", entityDescriptor.getValidUntil());
+            return Optional.empty();
+        }
+
+        return getServiceProviderSsoDescriptor(entityID, chainingMetadataResolver, entityDescriptor);
+
     }
 
     private static Optional<SamlRegisteredServiceServiceProviderMetadataFacade> getServiceProviderSsoDescriptor(final String entityID,
                                                                                                                 final MetadataResolver chainingMetadataResolver,
                                                                                                                 final EntityDescriptor entityDescriptor) {
-        final SPSSODescriptor ssoDescriptor = entityDescriptor.getSPSSODescriptor(SAMLConstants.SAML20P_NS);
+        val ssoDescriptor = entityDescriptor.getSPSSODescriptor(SAMLConstants.SAML20P_NS);
         if (ssoDescriptor != null) {
             LOGGER.debug("Located SP SSODescriptor in metadata for [{}]. Metadata is valid until [{}]", entityID,
-                    ObjectUtils.defaultIfNull(ssoDescriptor.getValidUntil(), "forever"));
+                ObjectUtils.defaultIfNull(ssoDescriptor.getValidUntil(), "forever"));
             if (ssoDescriptor.getValidUntil() != null && ssoDescriptor.getValidUntil().isBeforeNow()) {
                 LOGGER.warn("SP SSODescriptor in the metadata has expired at [{}]", ssoDescriptor.getValidUntil());
                 return Optional.empty();
             }
-            return Optional.of(new SamlRegisteredServiceServiceProviderMetadataFacade(ssoDescriptor, entityDescriptor, chainingMetadataResolver));
+            return Optional.of(new SamlRegisteredServiceServiceProviderMetadataFacade(ssoDescriptor, entityDescriptor,
+                chainingMetadataResolver));
         }
         LOGGER.warn("Could not locate SP SSODescriptor in the metadata for [{}]", entityID);
         return Optional.empty();
     }
 
-    public SPSSODescriptor getSsoDescriptor() {
-        return this.ssoDescriptor;
-    }
-
     public ZonedDateTime getValidUntil() {
         return DateTimeUtils.zonedDateTimeOf(this.ssoDescriptor.getValidUntil());
-    }
-
-    public EntityDescriptor getEntityDescriptor() {
-        return this.entityDescriptor;
     }
 
     public Organization getOrganization() {
@@ -204,11 +192,11 @@ public final class SamlRegisteredServiceServiceProviderMetadataFacade {
      * @return the supported name formats
      */
     public List<String> getSupportedNameIdFormats() {
-        final List<String> nameIdFormats = new ArrayList<>();
-        final List<XMLObject> children = this.ssoDescriptor.getOrderedChildren();
+        val nameIdFormats = new ArrayList<String>();
+        val children = this.ssoDescriptor.getOrderedChildren();
         if (children != null) {
             nameIdFormats.addAll(children.stream().filter(NameIDFormat.class::isInstance)
-                    .map(child -> ((NameIDFormat) child).getFormat()).collect(Collectors.toList()));
+                .map(child -> ((NameIDFormat) child).getFormat()).collect(Collectors.toList()));
         }
         return nameIdFormats;
     }
@@ -223,6 +211,16 @@ public final class SamlRegisteredServiceServiceProviderMetadataFacade {
 
     public SingleLogoutService getSingleLogoutService() {
         return getSingleLogoutServices().get(0);
+    }
+
+    /**
+     * Gets single logout service for the requested binding.
+     *
+     * @param binding the binding
+     * @return the single logout service or null
+     */
+    public SingleLogoutService getSingleLogoutService(final String binding) {
+        return getSingleLogoutServices().stream().filter(acs -> acs.getBinding().equals(binding)).findFirst().orElse(null);
     }
 
     /**

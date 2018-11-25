@@ -1,7 +1,8 @@
 package org.apereo.cas;
 
-import org.apache.catalina.util.ServerInfo;
 import org.apereo.cas.util.spring.boot.AbstractCasBanner;
+
+import org.apache.catalina.util.ServerInfo;
 import org.springframework.core.env.Environment;
 
 import java.util.Formatter;

@@ -1,10 +1,13 @@
 package org.apereo.cas.config;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.configuration.model.support.mongo.serviceregistry.MongoDbServiceRegistryProperties;
 import org.apereo.cas.mongo.MongoDbConnectionFactory;
-import org.apereo.cas.services.MongoServiceRegistryDao;
-import org.apereo.cas.services.ServiceRegistryDao;
+import org.apereo.cas.services.MongoDbServiceRegistry;
+import org.apereo.cas.services.ServiceRegistry;
+import org.apereo.cas.services.ServiceRegistryExecutionPlan;
+import org.apereo.cas.services.ServiceRegistryExecutionPlanConfigurer;
+
+import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -28,19 +31,30 @@ public class MongoDbServiceRegistryConfiguration {
     @ConditionalOnMissingBean(name = "mongoDbServiceRegistryTemplate")
     @Bean
     public MongoTemplate mongoDbServiceRegistryTemplate() {
-        final MongoDbServiceRegistryProperties mongo = casProperties.getServiceRegistry().getMongo();
-        final MongoDbConnectionFactory factory = new MongoDbConnectionFactory();
+        val mongo = casProperties.getServiceRegistry().getMongo();
+        val factory = new MongoDbConnectionFactory();
 
-        final MongoTemplate mongoTemplate = factory.buildMongoTemplate(mongo);
+        val mongoTemplate = factory.buildMongoTemplate(mongo);
         factory.createCollection(mongoTemplate, mongo.getCollection(), mongo.isDropCollection());
         return mongoTemplate;
     }
-    
+
     @Bean
-    public ServiceRegistryDao serviceRegistryDao() {
-        final MongoDbServiceRegistryProperties mongo = casProperties.getServiceRegistry().getMongo();
-        return new MongoServiceRegistryDao(
-                mongoDbServiceRegistryTemplate(),
-                mongo.getCollection());
+    public ServiceRegistry mongoDbServiceRegistry() {
+        val mongo = casProperties.getServiceRegistry().getMongo();
+        return new MongoDbServiceRegistry(
+            mongoDbServiceRegistryTemplate(),
+            mongo.getCollection());
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "mongoDbServiceRegistryExecutionPlanConfigurer")
+    public ServiceRegistryExecutionPlanConfigurer mongoDbServiceRegistryExecutionPlanConfigurer() {
+        return new ServiceRegistryExecutionPlanConfigurer() {
+            @Override
+            public void configureServiceRegistry(final ServiceRegistryExecutionPlan plan) {
+                plan.registerServiceRegistry(mongoDbServiceRegistry());
+            }
+        };
     }
 }

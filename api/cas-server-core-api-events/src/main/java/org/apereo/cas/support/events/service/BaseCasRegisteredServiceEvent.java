@@ -2,6 +2,7 @@ package org.apereo.cas.support.events.service;
 
 import org.apereo.cas.support.events.AbstractCasEvent;
 
+
 /**
  * This is {@link BaseCasRegisteredServiceEvent}.
  *

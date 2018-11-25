@@ -1,6 +1,5 @@
 package org.apereo.cas.web.flow;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.AuthenticationServiceSelectionPlan;
 import org.apereo.cas.authentication.principal.Service;
@@ -9,6 +8,9 @@ import org.apereo.cas.consent.ConsentEngine;
 import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.web.support.WebUtils;
+
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.webflow.action.EventFactorySupport;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
@@ -33,8 +35,8 @@ public class CheckConsentRequiredAction extends AbstractConsentAction {
     }
 
     @Override
-    protected Event doExecute(final RequestContext requestContext) {
-        final String consentEvent = determineConsentEvent(requestContext);
+    public Event doExecute(final RequestContext requestContext) {
+        val consentEvent = determineConsentEvent(requestContext);
         if (StringUtils.isBlank(consentEvent)) {
             return null;
         }
@@ -49,14 +51,15 @@ public class CheckConsentRequiredAction extends AbstractConsentAction {
      * @return the string
      */
     protected String determineConsentEvent(final RequestContext requestContext) {
-        final Service service = this.authenticationRequestServiceSelectionStrategies.resolveService(WebUtils.getService(requestContext));
+        val webService = WebUtils.getService(requestContext);
+        val service = this.authenticationRequestServiceSelectionStrategies.resolveService(webService);
         if (service == null) {
             return null;
         }
 
-        final RegisteredService registeredService = getRegisteredServiceForConsent(requestContext, service);
+        val registeredService = getRegisteredServiceForConsent(requestContext, service);
 
-        final Authentication authentication = WebUtils.getAuthentication(requestContext);
+        val authentication = WebUtils.getAuthentication(requestContext);
         if (authentication == null) {
             return null;
         }
@@ -76,7 +79,7 @@ public class CheckConsentRequiredAction extends AbstractConsentAction {
     protected String isConsentRequired(final Service service, final RegisteredService registeredService,
                                        final Authentication authentication,
                                        final RequestContext requestContext) {
-        final boolean required = this.consentEngine.isConsentRequiredFor(service, registeredService, authentication).getKey();
+        val required = this.consentEngine.isConsentRequiredFor(service, registeredService, authentication).getKey();
         return required ? EVENT_ID_CONSENT_REQUIRED : null;
     }
 }

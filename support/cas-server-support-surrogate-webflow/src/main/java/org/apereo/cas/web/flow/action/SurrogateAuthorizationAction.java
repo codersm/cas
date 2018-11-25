@@ -1,12 +1,13 @@
 package org.apereo.cas.web.flow.action;
 
-import org.apereo.cas.authentication.Authentication;
-import org.apereo.cas.authentication.AuthenticationCredentialsLocalBinder;
-import org.apereo.cas.authentication.principal.Service;
-import org.apereo.cas.services.RegisteredService;
-import org.apereo.cas.services.RegisteredServiceAccessStrategyUtils;
+import org.apereo.cas.audit.AuditableContext;
+import org.apereo.cas.audit.AuditableExecution;
+import org.apereo.cas.authentication.AuthenticationCredentialsThreadLocalBinder;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.web.support.WebUtils;
+
+import lombok.RequiredArgsConstructor;
+import lombok.val;
 import org.springframework.webflow.action.AbstractAction;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
@@ -17,28 +18,35 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@RequiredArgsConstructor
 public class SurrogateAuthorizationAction extends AbstractAction {
     private final ServicesManager servicesManager;
-    
-    public SurrogateAuthorizationAction(final ServicesManager servicesManager) {
-        this.servicesManager = servicesManager;   
-    }
+    private final AuditableExecution registeredServiceAccessStrategyEnforcer;
 
     @Override
     protected Event doExecute(final RequestContext requestContext) {
-        final Authentication ca = AuthenticationCredentialsLocalBinder.getCurrentAuthentication();
+        val ca = AuthenticationCredentialsThreadLocalBinder.getCurrentAuthentication();
         try {
-            final Service service = WebUtils.getService(requestContext);
-            final Authentication authentication = WebUtils.getAuthentication(requestContext);
-            final RegisteredService svc = WebUtils.getRegisteredService(requestContext);
+            val service = WebUtils.getService(requestContext);
+            val authentication = WebUtils.getAuthentication(requestContext);
+            val svc = WebUtils.getRegisteredService(requestContext);
             if (svc != null) {
-                AuthenticationCredentialsLocalBinder.bindCurrent(authentication);
-                RegisteredServiceAccessStrategyUtils.ensurePrincipalAccessIsAllowedForService(service, svc, authentication);
+                AuthenticationCredentialsThreadLocalBinder.bindCurrent(authentication);
+
+                val audit = AuditableContext.builder().service(service)
+                    .service(service)
+                    .authentication(authentication)
+                    .registeredService(svc)
+                    .retrievePrincipalAttributesFromReleasePolicy(Boolean.TRUE)
+                    .build();
+                val accessResult = this.registeredServiceAccessStrategyEnforcer.execute(audit);
+                accessResult.throwExceptionIfNeeded();
+
                 return success();
             }
             return null;
         } finally {
-            AuthenticationCredentialsLocalBinder.bindCurrent(ca);
+            AuthenticationCredentialsThreadLocalBinder.bindCurrent(ca);
         }
     }
 }

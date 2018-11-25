@@ -1,12 +1,14 @@
 package org.apereo.cas.integration.pac4j.authentication.handler.support;
 
-import org.apereo.cas.authentication.BasicIdentifiableCredential;
+import org.apereo.cas.authentication.Credential;
+import org.apereo.cas.authentication.credential.BasicIdentifiableCredential;
 import org.apereo.cas.authentication.handler.PrincipalNameTransformer;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.pac4j.core.credentials.TokenCredentials;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.security.auth.login.AccountNotFoundException;
 import java.security.GeneralSecurityException;
@@ -18,16 +20,17 @@ import java.security.GeneralSecurityException;
  * @author Misagh Moayyed
  * @since 4.2.0
  */
+@Slf4j
 public abstract class AbstractTokenWrapperAuthenticationHandler extends
-        AbstractWrapperAuthenticationHandler<BasicIdentifiableCredential, TokenCredentials> {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractTokenWrapperAuthenticationHandler.class);
-    
+    AbstractWrapperAuthenticationHandler<BasicIdentifiableCredential, TokenCredentials> {
+
     /**
      * PrincipalNameTransformer to be used by subclasses to transform the principal name.
      */
-    private PrincipalNameTransformer principalNameTransformer = formUserId -> formUserId;
+    private final PrincipalNameTransformer principalNameTransformer;
 
-    public AbstractTokenWrapperAuthenticationHandler(final String name, final ServicesManager servicesManager, final PrincipalFactory principalFactory,
+    public AbstractTokenWrapperAuthenticationHandler(final String name, final ServicesManager servicesManager,
+                                                     final PrincipalFactory principalFactory,
                                                      final Integer order, final PrincipalNameTransformer principalNameTransformer) {
         super(name, servicesManager, principalFactory, order);
         if (principalNameTransformer == null) {
@@ -39,24 +42,25 @@ public abstract class AbstractTokenWrapperAuthenticationHandler extends
 
     @Override
     protected TokenCredentials convertToPac4jCredentials(final BasicIdentifiableCredential casCredential)
-            throws GeneralSecurityException {
+        throws GeneralSecurityException {
         LOGGER.debug("CAS credentials: [{}]", casCredential);
 
-        final String id = this.principalNameTransformer.transform(casCredential.getId());
+        val id = this.principalNameTransformer.transform(casCredential.getId());
         if (id == null) {
             throw new AccountNotFoundException("Id is null.");
         }
-        final TokenCredentials credentials = new TokenCredentials(id, getClass().getSimpleName());
+        val credentials = new TokenCredentials(id);
         LOGGER.debug("pac4j credentials: [{}]", credentials);
         return credentials;
     }
 
     @Override
-    protected Class<BasicIdentifiableCredential> getCasCredentialsType() {
-        return BasicIdentifiableCredential.class;
+    public boolean supports(final Class<? extends Credential> clazz) {
+        return BasicIdentifiableCredential.class.isAssignableFrom(clazz);
     }
 
-    public PrincipalNameTransformer getPrincipalNameTransformer() {
-        return this.principalNameTransformer;
+    @Override
+    protected Class<BasicIdentifiableCredential> getCasCredentialsType() {
+        return BasicIdentifiableCredential.class;
     }
 }

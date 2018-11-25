@@ -2,11 +2,11 @@
 <Configuration shutdownHook="disable">
     <Appenders>
         <Console name="console" target="SYSTEM_OUT">
-            <PatternLayout pattern="%d %p [%c] - &lt;%m&gt;%n"/>
+            <PatternLayout pattern="%highlight{%d %p [%c] - &lt;%m&gt;%n}" />
         </Console>
         <RollingFile name="file" fileName="build/saml.log" append="true"
                      filePattern="saml-%d{yyyy-MM-dd-HH}-%i.log.gz">
-            <PatternLayout pattern="%d %p [%c] - %m%n"/>
+            <PatternLayout pattern="%highlight{%d %p [%c] - %m%n}" />
             <Policies>
                 <OnStartupTriggeringPolicy />
                 <SizeBasedTriggeringPolicy size="10 MB"/>
@@ -15,17 +15,17 @@
         </RollingFile>
     </Appenders>
     <Loggers>
-        <Logger name="org.apereo" level="warn" additivity="false">
+        <Logger name="org.apereo" level="off" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
-        <Logger name="org.opensaml" level="warn" additivity="false">
+        <Logger name="org.opensaml" level="off" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
-        <Logger name="PROTOCOL_MESSAGE" level="warn" additivity="false">
+        <Logger name="PROTOCOL_MESSAGE" level="off" additivity="false">
             <AppenderRef ref="console"/>
         </Logger>
         <Logger name="org.apache.xml.security" level="off" />
-        <Root level="warn">
+        <Root level="off">
             <AppenderRef ref="console"/>
         </Root>
     </Loggers>

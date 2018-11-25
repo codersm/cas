@@ -1,8 +1,8 @@
 package org.apereo.cas.digest;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
-import org.apereo.cas.authentication.CredentialMetaData;
 import org.junit.Test;
 
 import java.io.File;
@@ -21,11 +21,11 @@ public class DigestCredentialTests {
 
     @Test
     public void verifySerializeADigestCredentialToJson() throws IOException {
-        final DigestCredential credentialMetaDataWritten = new DigestCredential("uid", "realm", "hash");
+        val credentialMetaDataWritten = new DigestCredential("uid", "realm", "hash");
 
         MAPPER.writeValue(JSON_FILE, credentialMetaDataWritten);
 
-        final CredentialMetaData credentialMetaDataRead = MAPPER.readValue(JSON_FILE, DigestCredential.class);
+        val credentialMetaDataRead = MAPPER.readValue(JSON_FILE, DigestCredential.class);
 
         assertEquals(credentialMetaDataWritten, credentialMetaDataRead);
     }

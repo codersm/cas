@@ -1,6 +1,7 @@
 ---
 layout: default
 title: CAS - Shibboleth Integration
+category: Integration
 ---
 
 # Overview
@@ -20,8 +21,7 @@ authenticate before the IdP proceeds with the requested action.
 ## SSO for Shibboleth IdP (External)
 
 This is a Shibboleth IdP external authentication plugin that delegates
-the authentication to CAS. The advantage of using
-this component over the plain `RemoteUser` solution is the ability to
+the authentication to CAS. This solution has the ability to
 utilize a full range of native CAS protocol features such as `renew` and `gateway`.
 
 The plugin is available for both
@@ -41,7 +41,7 @@ https://sso.example.org/cas/login?service=<authentication-plugin-url>&entityId=<
 You can also take advantage of the `entityId` parameter and treat it as a normal CAS service definition,
 so it can be used for multifactor authentication and authorization.
 
-See [this guide](../installation/Configuring-Multifactor-Authentication-Triggers.html) for more info.
+See [this guide](../mfa/Configuring-Multifactor-Authentication-Triggers.html) for more info.
 
 ## Displaying SAML MDUI
 
@@ -64,7 +64,7 @@ Support is enabled by including the following dependency in the WAR overlay:
 
 You may allow CAS to recognize SAML MDUI directly from metadata documents that are fed to CAS via settings. If the metadata for the relying party matches the requested `entityId` and contains MDUI elements, those will be passed onto the login page for decorations. If MDUI is not available in the metadata, the relevant elements from the matching service in the service registry will be used all the same.
 
-To see the relevant list of CAS properties, please [review this guide](../installation/Configuration-Properties.html#saml-metadata-ui).
+To see the relevant list of CAS properties, please [review this guide](../configuration/Configuration-Properties.html#saml-metadata-ui).
 
 ### Service Registry Metadata
 

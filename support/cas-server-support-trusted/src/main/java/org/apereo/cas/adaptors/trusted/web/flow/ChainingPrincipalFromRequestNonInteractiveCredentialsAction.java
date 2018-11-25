@@ -5,8 +5,7 @@ import org.apereo.cas.authentication.adaptive.AdaptiveAuthenticationPolicy;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.web.flow.resolver.CasDelegatingWebflowEventResolver;
 import org.apereo.cas.web.flow.resolver.CasWebflowEventResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
 import org.springframework.core.annotation.AnnotationAwareOrderComparator;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,9 +20,7 @@ import java.util.Objects;
  * @since 5.2.0
  */
 public class ChainingPrincipalFromRequestNonInteractiveCredentialsAction extends BasePrincipalFromNonInteractiveCredentialsAction {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ChainingPrincipalFromRequestNonInteractiveCredentialsAction.class);
-
-    private List<BasePrincipalFromNonInteractiveCredentialsAction> chain = new ArrayList<>();
+    private final List<BasePrincipalFromNonInteractiveCredentialsAction> chain = new ArrayList<>();
 
     public ChainingPrincipalFromRequestNonInteractiveCredentialsAction(final CasDelegatingWebflowEventResolver initialAuthenticationAttemptWebflowEventResolver,
                                                                        final CasWebflowEventResolver serviceTicketRequestWebflowEventResolver,
@@ -31,7 +28,7 @@ public class ChainingPrincipalFromRequestNonInteractiveCredentialsAction extends
                                                                        final PrincipalFactory principalFactory,
                                                                        final RemoteRequestPrincipalAttributesExtractor extractor) {
         super(initialAuthenticationAttemptWebflowEventResolver, serviceTicketRequestWebflowEventResolver,
-                adaptiveAuthenticationPolicy, principalFactory, extractor);
+            adaptiveAuthenticationPolicy, principalFactory, extractor);
     }
 
     /**
@@ -47,10 +44,10 @@ public class ChainingPrincipalFromRequestNonInteractiveCredentialsAction extends
     protected String getRemotePrincipalId(final HttpServletRequest request) {
         AnnotationAwareOrderComparator.sort(this.chain);
         return this.chain
-                .stream()
-                .map(action -> action.getRemotePrincipalId(request))
-                .filter(Objects::nonNull)
-                .findFirst()
-                .orElse(null);
+            .stream()
+            .map(action -> action.getRemotePrincipalId(request))
+            .filter(Objects::nonNull)
+            .findFirst()
+            .orElse(null);
     }
 }

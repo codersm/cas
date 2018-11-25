@@ -1,12 +1,14 @@
 package org.apereo.cas.adaptors.generic;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.PreventedException;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.handler.support.AbstractUsernamePasswordAuthenticationHandler;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
+
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.io.Resource;
 
 import javax.security.auth.login.AccountNotFoundException;
@@ -15,7 +17,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.GeneralSecurityException;
-import java.util.stream.Stream;
+import java.util.ArrayList;
 
 /**
  * Class designed to read data from a file in the format of USERNAME SEPARATOR
@@ -47,7 +49,8 @@ public class FileAuthenticationHandler extends AbstractUsernamePasswordAuthentic
      */
     private final Resource fileName;
 
-    public FileAuthenticationHandler(final String name, final ServicesManager servicesManager, final PrincipalFactory principalFactory,
+    public FileAuthenticationHandler(final String name, final ServicesManager servicesManager,
+                                     final PrincipalFactory principalFactory,
                                      final Resource fileName, final String separator) {
         super(name, servicesManager, principalFactory, null);
         this.fileName = fileName;
@@ -55,20 +58,20 @@ public class FileAuthenticationHandler extends AbstractUsernamePasswordAuthentic
     }
 
     @Override
-    protected HandlerResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential transformedCredential,
-                                                                 final String originalPassword)
+    protected AuthenticationHandlerExecutionResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential transformedCredential,
+                                                                                        final String originalPassword)
         throws GeneralSecurityException, PreventedException {
         try {
             if (this.fileName == null) {
                 throw new FileNotFoundException("Filename does not exist");
             }
-            final String username = transformedCredential.getUsername();
-            final String passwordOnRecord = getPasswordOnRecord(username);
+            val username = transformedCredential.getUsername();
+            val passwordOnRecord = getPasswordOnRecord(username);
             if (StringUtils.isBlank(passwordOnRecord)) {
                 throw new AccountNotFoundException(username + " not found in backing file.");
             }
             if (matches(originalPassword, passwordOnRecord)) {
-                return createHandlerResult(transformedCredential, this.principalFactory.createPrincipal(username), null);
+                return createHandlerResult(transformedCredential, this.principalFactory.createPrincipal(username), new ArrayList<>(0));
             }
         } catch (final IOException e) {
             throw new PreventedException("IO error reading backing file", e);
@@ -84,10 +87,10 @@ public class FileAuthenticationHandler extends AbstractUsernamePasswordAuthentic
      * @throws IOException Signals that an I/O exception has occurred.
      */
     private String getPasswordOnRecord(final String username) throws IOException {
-        try (Stream<String> stream = Files.lines(fileName.getFile().toPath())) {
+        try (val stream = Files.lines(fileName.getFile().toPath())) {
             return stream.map(line -> line.split(this.separator))
                 .filter(lineFields -> {
-                    final String userOnRecord = lineFields[0];
+                    val userOnRecord = lineFields[0];
                     return username.equals(userOnRecord);
                 })
                 .map(lineFields -> lineFields[1])

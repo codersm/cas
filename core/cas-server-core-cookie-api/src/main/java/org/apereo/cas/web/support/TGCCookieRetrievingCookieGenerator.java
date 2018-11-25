@@ -1,5 +1,6 @@
 package org.apereo.cas.web.support;
 
+
 /**
  * Generates the tgc cookie.
  *
@@ -7,6 +8,8 @@ package org.apereo.cas.web.support;
  * @since 4.2
  */
 public class TGCCookieRetrievingCookieGenerator extends CookieRetrievingCookieGenerator {
+
+    private static final long serialVersionUID = -1239028220717183717L;
 
     /**
      * Instantiates a new TGC cookie retrieving cookie generator.

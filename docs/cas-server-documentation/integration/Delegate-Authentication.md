@@ -1,6 +1,7 @@
 ---
 layout: default
 title: CAS - Delegate Authentication
+category: Authentication
 ---
 
 # Delegated Authentication
@@ -12,6 +13,7 @@ CAS can act as a client using the [pac4j security engine](https://github.com/pac
 * OAuth2 providers such as Facebook, Twitter, Google, LinkedIn, Yahoo, etc
 * OpenID providers
 * OpenID Connect identity providers
+* [ADFS](ADFS-Integration.html)
 
 Support is enabled by including the following dependency in the WAR overlay:
 
@@ -23,8 +25,7 @@ Support is enabled by including the following dependency in the WAR overlay:
 </dependency>
 ```
 
-<div class="alert alert-info"><strong>Remember</strong><p>Delegated authentication always assumes the originator of the authentication request is a CAS client; an
-application that understands CAS protocol and can validate a service ticket. Clients that use other protocols (SAML2, OAuth, etc) with CAS cannot today take advantage of delegated authentication scenarios. Support for this behavior may be worked out in future releases.</p></div>
+<div class="alert alert-info"><strong>Note</strong><p>The client issuing the authentication request can be of any type (SAML, OAuth2, OpenID Connect, etc) and is allowed to submit the authentication request using any protocol that the CAS server supports and is configured to understand. This means that you may have an OAuth2 client using CAS in delegation mode to authenticate at an external SAML2 identity provider, another CAS server or Facebook and in the end of that flow receiving an OAuth2 user profile. The CAS server is able to act as a proxy, doing the protocol translation in the middle.</p></div>
 
 ## Register Providers
 
@@ -32,7 +33,7 @@ An identity provider is a server which can authenticate users (like Google, Yaho
 If you want to delegate the CAS authentication to Twitter for example, you have to add an
 OAuth client for the Twitter provider, which will be done automatically for you once provider settings are taught to CAS.
 
-To see the relevant list of CAS properties, please [review this guide](../installation/Configuration-Properties.html#pac4j-delegated-authn).
+To see the relevant list of CAS properties, please [review this guide](../configuration/Configuration-Properties.html#pac4j-delegated-authn).
 
 Notice that for each OAuth provider, the CAS server is considered as an OAuth client and therefore should be declared as
 an OAuth client at the OAuth provider. After the declaration, a key and a secret is given by the OAuth provider which has
@@ -50,7 +51,7 @@ After a successful delegated authentication, a user is created inside the CAS se
 this one can be created only from the technical identifier received from the external identity provider (like `1234`)
 or as a "typed identifier" (like `FacebookProfile#1234`), which is the default.
 
-To see the relevant list of CAS properties, please [review this guide](../installation/Configuration-Properties.html#pac4j-delegated-authn).
+To see the relevant list of CAS properties, please [review this guide](../configuration/Configuration-Properties.html#pac4j-delegated-authn).
 
 ## Returned Payload
 
@@ -115,7 +116,22 @@ Service definitions may be conditionally authorized to use an external identity 
 }
 ```
 
-The list of allowed providers should contain the exteral identity provider names (i.e. client names).
+The list of allowed providers should contain the external identity provider names (i.e. client names).
+
+## Configuration
+
+### SAML2 Identity Providers
+
+In the event that CAS is configured to delegate authentication to an external identity provider, the service provider (CAS) metadata as well as the identity provider metadata automatically become available at the following endpoints. Note that you can use more than one external identity provider with CAS, where each integration may be done with a different set of metadata and keys for CAS acting as the service provider. Each integration (referred to as a client, since CAS itself becomes a client of the identity provider) may be given a name optionally.
+
+| Endpoint                   | Description
+|---------------------------|--------------------------------------------------------------------------------------------------------------------
+| `/sp/metadata`         | Displays the service provider (CAS) metadata. Works well if there is only one SAML2 IdP is defined.
+| `/sp/idp/metadata`         | Displays the identity provider metadata. Works well if there is only one SAML2 IdP is defined.
+| `/sp/{clientName}/metadata`         | Displays the service provider metadata for the requested client name.
+| `/sp/{clientName}/idp/metadata`         | Displays the identity provider metadata for the requested client name.
+
+Remember that the service provider (CAS) metadata is automatically generated once you access the above endpoints or view the CAS login screen. This is required because today, generating the metadata requires access to the HTTP request/response. In the event that metadata cannot be resolved, a status code of `406 - Not Acceptable` is returned.
 
 ## Troubleshooting
 

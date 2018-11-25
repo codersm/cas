@@ -1,14 +1,14 @@
 package org.apereo.cas.adaptors.yubikey.registry;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.yubico.client.v2.YubicoClient;
 import org.apereo.cas.adaptors.yubikey.YubiKeyAccountValidator;
 import org.apereo.cas.util.ResourceUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.core.io.Resource;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,8 +18,9 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
 public class JsonYubiKeyAccountRegistry extends WhitelistYubiKeyAccountRegistry {
-    private static final Logger LOGGER = LoggerFactory.getLogger(JsonYubiKeyAccountRegistry.class);
+
     private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
     private final Resource jsonResource;
 
@@ -28,41 +29,51 @@ public class JsonYubiKeyAccountRegistry extends WhitelistYubiKeyAccountRegistry 
         this.jsonResource = jsonResource;
     }
 
+    @SneakyThrows
+    private static Map<String, String> getDevicesFromJsonResource(final Resource jsonResource) {
+        if (!ResourceUtils.doesResourceExist(jsonResource)) {
+            val res = jsonResource.getFile().createNewFile();
+            if (res) {
+                LOGGER.debug("Created JSON resource @ [{}]", jsonResource);
+            }
+        }
+        if (ResourceUtils.doesResourceExist(jsonResource)) {
+            val file = jsonResource.getFile();
+            if (file.canRead() && file.length() > 0) {
+                return MAPPER.readValue(file, Map.class);
+            }
+        } else {
+            LOGGER.warn("JSON resource @ [{}] does not exist", jsonResource);
+        }
+        return new HashMap<>(0);
+    }
+
+    @SneakyThrows
     @Override
     public boolean registerAccountFor(final String uid, final String token) {
-        try {
-            if (accountValidator.isValid(uid, token)) {
-                final String yubikeyPublicId = YubicoClient.getPublicId(token);
-                final File file = jsonResource.getFile();
-                this.devices.put(uid, yubikeyPublicId);
-                MAPPER.writer().withDefaultPrettyPrinter().writeValue(file, this.devices);
-                return true;
-            }
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
+        if (getAccountValidator().isValid(uid, token)) {
+            val yubikeyPublicId = getAccountValidator().getTokenPublicId(token);
+            val file = jsonResource.getFile();
+            this.devices.put(uid, getCipherExecutor().encode(yubikeyPublicId));
+            MAPPER.writer().withDefaultPrettyPrinter().writeValue(file, this.devices);
+            return true;
         }
         return false;
     }
 
-    private static Map<String, String> getDevicesFromJsonResource(final Resource jsonResource) {
-        try {
-            if (!ResourceUtils.doesResourceExist(jsonResource)) {
-                final boolean res = jsonResource.getFile().createNewFile();
-                if (res) {
-                    LOGGER.debug("Created JSON resource @ [{}]", jsonResource);
-                }
-            }
-            if (ResourceUtils.doesResourceExist(jsonResource)) {
-                final File file = jsonResource.getFile();
-                if (file.canRead() && file.length() > 0) {
-                    return MAPPER.readValue(file, Map.class);
-                }
-            } else {
-                LOGGER.warn("JSON resource @ [{}] does not exist", jsonResource);
-            }
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
-        return new HashMap<>(0);
+    @Override
+    @SneakyThrows
+    public void delete(final String uid) {
+        this.devices.remove(uid);
+        val file = jsonResource.getFile();
+        MAPPER.writer().withDefaultPrettyPrinter().writeValue(file, this.devices);
+    }
+
+    @Override
+    @SneakyThrows
+    public void deleteAll() {
+        this.devices.clear();
+        val file = jsonResource.getFile();
+        MAPPER.writer().withDefaultPrettyPrinter().writeValue(file, this.devices);
     }
 }

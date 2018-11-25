@@ -1,5 +1,6 @@
 package org.apereo.cas.configuration;
 
+import lombok.val;
 import org.springframework.core.convert.converter.Converter;
 import org.springframework.util.ClassUtils;
 import org.springframework.util.StringUtils;
@@ -17,8 +18,9 @@ public class CommaSeparatedStringToThrowablesConverter implements Converter<Stri
     @Override
     public List<Class<? extends Throwable>> convert(final String source) {
         try {
-            final List<Class<? extends Throwable>> classes = new ArrayList<>();
-            for (final String className : StringUtils.commaDelimitedListToStringArray(source)) {
+            val strings = StringUtils.commaDelimitedListToStringArray(source);
+            val classes = new ArrayList<Class<? extends Throwable>>(strings.length);
+            for (val className : strings) {
                 classes.add((Class<? extends Throwable>) ClassUtils.forName(className.trim(), getClass().getClassLoader()));
             }
             return classes;

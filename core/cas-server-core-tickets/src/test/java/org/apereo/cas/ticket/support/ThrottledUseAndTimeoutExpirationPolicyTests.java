@@ -1,12 +1,13 @@
 package org.apereo.cas.ticket.support;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.io.FileUtils;
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
 import org.apereo.cas.services.RegisteredServiceTestUtils;
-import org.apereo.cas.ticket.ExpirationPolicy;
 import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.TicketGrantingTicketImpl;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
+import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -22,7 +23,7 @@ import static org.junit.Assert.*;
 public class ThrottledUseAndTimeoutExpirationPolicyTests {
 
     private static final File JSON_FILE = new File(FileUtils.getTempDirectoryPath(), "throttleUseAndTimeoutExpirationPolicy.json");
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = new ObjectMapper().findAndRegisterModules();
 
     private static final long TIMEOUT = 2000;
 
@@ -31,7 +32,7 @@ public class ThrottledUseAndTimeoutExpirationPolicyTests {
     private TicketGrantingTicket ticket;
 
     @Before
-    public void setUp() {
+    public void initialize() {
         this.expirationPolicy = new ThrottledUseAndTimeoutExpirationPolicy();
         this.expirationPolicy.setTimeToKillInSeconds(TIMEOUT);
         this.expirationPolicy.setTimeInBetweenUsesInSeconds(TIMEOUT / 5);
@@ -55,7 +56,7 @@ public class ThrottledUseAndTimeoutExpirationPolicyTests {
     @Test
     public void verifyTicketUsedButWithTimeout() {
         this.ticket.grantServiceTicket("test", RegisteredServiceTestUtils.getService(), this.expirationPolicy, false,
-                true);
+            true);
         expirationPolicy.setTimeToKillInSeconds(TIMEOUT);
         expirationPolicy.setTimeInBetweenUsesInSeconds(-10);
         assertFalse(this.ticket.isExpired());
@@ -64,7 +65,7 @@ public class ThrottledUseAndTimeoutExpirationPolicyTests {
     @Test
     public void verifyNotWaitingEnoughTime() {
         this.ticket.grantServiceTicket("test", RegisteredServiceTestUtils.getService(), this.expirationPolicy, false,
-                true);
+            true);
         expirationPolicy.setTimeToKillInSeconds(TIMEOUT);
         assertTrue(this.ticket.isExpired());
     }
@@ -72,9 +73,7 @@ public class ThrottledUseAndTimeoutExpirationPolicyTests {
     @Test
     public void verifySerializeATimeoutExpirationPolicyToJson() throws IOException {
         MAPPER.writeValue(JSON_FILE, expirationPolicy);
-
-        final ExpirationPolicy policyRead = MAPPER.readValue(JSON_FILE, ThrottledUseAndTimeoutExpirationPolicy.class);
-
+        val policyRead = MAPPER.readValue(JSON_FILE, ThrottledUseAndTimeoutExpirationPolicy.class);
         assertEquals(expirationPolicy, policyRead);
     }
 }

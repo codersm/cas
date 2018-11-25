@@ -2,8 +2,6 @@ package org.apereo.cas.ticket.accesstoken;
 
 import org.apereo.cas.ticket.OAuthToken;
 
-import java.util.Collection;
-
 /**
  * An access token is an OAuth token which can be used multiple times and has a long lifetime.
  * It is used to access resources on behalf of a user and OAuth client.
@@ -19,10 +17,16 @@ public interface AccessToken extends OAuthToken {
     String PREFIX = "AT";
 
     /**
-     * Gets scopes.
+     * Sets id token.
      *
-     * @return the scopes
+     * @param idToken the id token
      */
-    @Override
-    Collection<String> getScopes();
+    void setIdToken(String idToken);
+
+    /**
+     * Gets id token.
+     *
+     * @return the id token
+     */
+    String getIdToken();
 }

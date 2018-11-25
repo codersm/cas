@@ -5,12 +5,15 @@ import org.apereo.cas.api.AuthenticationRiskEvaluator;
 import org.apereo.cas.api.AuthenticationRiskScore;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.services.RegisteredService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.val;
 import org.apereo.inspektr.audit.annotation.Audit;
 
 import javax.servlet.http.HttpServletRequest;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,12 +22,9 @@ import java.util.Set;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@RequiredArgsConstructor
 public class DefaultAuthenticationRiskEvaluator implements AuthenticationRiskEvaluator {
     private final Set<AuthenticationRequestRiskCalculator> calculators;
-
-    public DefaultAuthenticationRiskEvaluator(final Set<AuthenticationRequestRiskCalculator> calculators) {
-        this.calculators = calculators;
-    }
 
     @Override
     public Set<AuthenticationRequestRiskCalculator> getCalculators() {
@@ -42,10 +42,10 @@ public class DefaultAuthenticationRiskEvaluator implements AuthenticationRiskEva
             return new AuthenticationRiskScore(AuthenticationRequestRiskCalculator.HIGHEST_RISK_SCORE);
         }
 
-        final List<AuthenticationRiskScore> scores = new ArrayList<>();
-        this.calculators.stream().forEach(r -> scores.add(r.calculate(authentication, service, request)));
-        final BigDecimal sum = scores.stream().map(AuthenticationRiskScore::getScore).reduce(BigDecimal.ZERO, BigDecimal::add);
-        final BigDecimal score = sum.divide(BigDecimal.valueOf(this.calculators.size()), 2, BigDecimal.ROUND_UP);
+        val scores = new ArrayList<AuthenticationRiskScore>();
+        this.calculators.forEach(r -> scores.add(r.calculate(authentication, service, request)));
+        val sum = scores.stream().map(AuthenticationRiskScore::getScore).reduce(BigDecimal.ZERO, BigDecimal::add);
+        val score = sum.divide(BigDecimal.valueOf(this.calculators.size()), 2, RoundingMode.UP);
         return new AuthenticationRiskScore(score);
     }
 }

@@ -6,22 +6,23 @@ import org.apereo.cas.web.flow.actions.AbstractNonInteractiveCredentialsAction;
 import org.apereo.cas.web.flow.resolver.CasDelegatingWebflowEventResolver;
 import org.apereo.cas.web.flow.resolver.CasWebflowEventResolver;
 import org.apereo.cas.web.support.WebUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.util.StringUtils;
 import org.springframework.webflow.execution.RequestContext;
-
-import javax.servlet.http.HttpServletRequest;
 
 /**
  * A webflow action that attempts to grab the remote address from the request,
  * and construct a {@link RemoteAddressCredential} object.
+ *
  * @author Scott Battaglia
  * @since 3.2.1
  */
+@Slf4j
 public class RemoteAddressNonInteractiveCredentialsAction extends AbstractNonInteractiveCredentialsAction {
-    private static final Logger LOGGER = LoggerFactory.getLogger(RemoteAddressNonInteractiveCredentialsAction.class);
-    
+
+
     public RemoteAddressNonInteractiveCredentialsAction(final CasDelegatingWebflowEventResolver initialAuthenticationAttemptWebflowEventResolver,
                                                         final CasWebflowEventResolver serviceTicketRequestWebflowEventResolver,
                                                         final AdaptiveAuthenticationPolicy adaptiveAuthenticationPolicy) {
@@ -30,8 +31,8 @@ public class RemoteAddressNonInteractiveCredentialsAction extends AbstractNonInt
 
     @Override
     protected Credential constructCredentialsFromRequest(final RequestContext context) {
-        final HttpServletRequest request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
-        final String remoteAddress = request.getRemoteAddr();
+        val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
+        val remoteAddress = request.getRemoteAddr();
 
         if (StringUtils.hasText(remoteAddress)) {
             return new RemoteAddressCredential(remoteAddress);

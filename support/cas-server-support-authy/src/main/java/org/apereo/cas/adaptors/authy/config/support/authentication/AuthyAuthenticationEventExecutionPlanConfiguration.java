@@ -1,23 +1,27 @@
 package org.apereo.cas.adaptors.authy.config.support.authentication;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.adaptors.authy.AuthyAuthenticationHandler;
 import org.apereo.cas.adaptors.authy.AuthyClientInstance;
 import org.apereo.cas.adaptors.authy.AuthyMultifactorAuthenticationProvider;
+import org.apereo.cas.adaptors.authy.AuthyTokenCredential;
 import org.apereo.cas.adaptors.authy.web.flow.AuthyAuthenticationRegistrationWebflowAction;
-import org.apereo.cas.authentication.MultifactorAuthenticationProviderBypass;
-import org.apereo.cas.authentication.MultifactorAuthenticationUtils;
-import org.apereo.cas.authentication.metadata.AuthenticationContextAttributeMetaDataPopulator;
+import org.apereo.cas.authentication.AuthenticationEventExecutionPlanConfigurer;
 import org.apereo.cas.authentication.AuthenticationHandler;
 import org.apereo.cas.authentication.AuthenticationMetaDataPopulator;
-import org.apereo.cas.authentication.principal.DefaultPrincipalFactory;
+import org.apereo.cas.authentication.MultifactorAuthenticationProvider;
+import org.apereo.cas.authentication.MultifactorAuthenticationProviderBypass;
+import org.apereo.cas.authentication.MultifactorAuthenticationUtils;
+import org.apereo.cas.authentication.handler.ByCredentialTypeAuthenticationHandlerResolver;
+import org.apereo.cas.authentication.metadata.AuthenticationContextAttributeMetaDataPopulator;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
-import org.apereo.cas.authentication.AuthenticationEventExecutionPlanConfigurer;
+import org.apereo.cas.authentication.principal.PrincipalFactoryUtils;
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.configuration.model.support.mfa.AuthyMultifactorProperties;
-import org.apereo.cas.services.MultifactorAuthenticationProvider;
-
 import org.apereo.cas.services.ServicesManager;
+
+import lombok.SneakyThrows;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -43,44 +47,43 @@ public class AuthyAuthenticationEventExecutionPlanConfiguration {
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
     @RefreshScope
     @Bean
     public AuthyClientInstance authyClientInstance() {
-        final AuthyMultifactorProperties authy = casProperties.getAuthn().getMfa().getAuthy();
+        val authy = casProperties.getAuthn().getMfa().getAuthy();
         if (StringUtils.isBlank(authy.getApiKey())) {
             throw new IllegalArgumentException("Authy API key must be defined");
         }
-        return new AuthyClientInstance(authy.getApiKey(), authy.getApiUrl(), 
-                authy.getMailAttribute(), authy.getPhoneAttribute(),
-                authy.getCountryCode());
+        return new AuthyClientInstance(authy.getApiKey(), authy.getApiUrl(),
+            authy.getMailAttribute(), authy.getPhoneAttribute(),
+            authy.getCountryCode());
     }
 
+    @ConditionalOnMissingBean(name = "authyAuthenticationHandler")
     @RefreshScope
     @Bean
+    @SneakyThrows
     public AuthenticationHandler authyAuthenticationHandler() {
-        try {
-            final AuthyMultifactorProperties authy = casProperties.getAuthn().getMfa().getAuthy();
-            final boolean forceVerification = authy.isForceVerification();
-            return new AuthyAuthenticationHandler(authy.getName(), servicesManager, authyPrincipalFactory(), authyClientInstance(), forceVerification);
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        val authy = casProperties.getAuthn().getMfa().getAuthy();
+        val forceVerification = authy.isForceVerification();
+        return new AuthyAuthenticationHandler(authy.getName(), servicesManager.getIfAvailable(),
+            authyPrincipalFactory(), authyClientInstance(), forceVerification, authy.getOrder());
     }
 
     @ConditionalOnMissingBean(name = "authyPrincipalFactory")
     @Bean
     public PrincipalFactory authyPrincipalFactory() {
-        return new DefaultPrincipalFactory();
+        return PrincipalFactoryUtils.newPrincipalFactory();
     }
 
     @Bean
     @RefreshScope
-    public MultifactorAuthenticationProvider authyAuthenticatorAuthenticationProvider() {
-        final AuthyMultifactorAuthenticationProvider p = new AuthyMultifactorAuthenticationProvider();
+    public MultifactorAuthenticationProvider authyAuthenticatorMultifactorAuthenticationProvider() {
+        val p = new AuthyMultifactorAuthenticationProvider();
         p.setBypassEvaluator(authyBypassEvaluator());
-        p.setGlobalFailureMode(casProperties.getAuthn().getMfa().getGlobalFailureMode());
+        p.setFailureMode(casProperties.getAuthn().getMfa().getAuthy().getFailureMode());
         p.setOrder(casProperties.getAuthn().getMfa().getAuthy().getRank());
         p.setId(casProperties.getAuthn().getMfa().getAuthy().getId());
         return p;
@@ -96,9 +99,9 @@ public class AuthyAuthenticationEventExecutionPlanConfiguration {
     @RefreshScope
     public AuthenticationMetaDataPopulator authyAuthenticationMetaDataPopulator() {
         return new AuthenticationContextAttributeMetaDataPopulator(
-                casProperties.getAuthn().getMfa().getAuthenticationContextAttribute(),
-                authyAuthenticationHandler(),
-                authyAuthenticatorAuthenticationProvider()
+            casProperties.getAuthn().getMfa().getAuthenticationContextAttribute(),
+            authyAuthenticationHandler(),
+            authyAuthenticatorMultifactorAuthenticationProvider().getId()
         );
     }
 
@@ -113,7 +116,8 @@ public class AuthyAuthenticationEventExecutionPlanConfiguration {
     public AuthenticationEventExecutionPlanConfigurer authyAuthenticationEventExecutionPlanConfigurer() {
         return plan -> {
             plan.registerAuthenticationHandler(authyAuthenticationHandler());
-            plan.registerMetadataPopulator(authyAuthenticationMetaDataPopulator());
+            plan.registerAuthenticationMetadataPopulator(authyAuthenticationMetaDataPopulator());
+            plan.registerAuthenticationHandlerResolver(new ByCredentialTypeAuthenticationHandlerResolver(AuthyTokenCredential.class));
         };
     }
 }

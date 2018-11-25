@@ -1,44 +1,51 @@
 package org.apereo.cas.web.support;
 
-import org.apache.commons.lang3.ObjectUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.authentication.Authentication;
+import org.apereo.cas.authentication.AuthenticationCredentialsThreadLocalBinder;
 import org.apereo.cas.authentication.AuthenticationResult;
 import org.apereo.cas.authentication.AuthenticationResultBuilder;
 import org.apereo.cas.authentication.Credential;
+import org.apereo.cas.authentication.MultifactorAuthenticationProvider;
 import org.apereo.cas.authentication.adaptive.geo.GeoLocationRequest;
 import org.apereo.cas.authentication.principal.Principal;
 import org.apereo.cas.authentication.principal.Response;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.authentication.principal.WebApplicationService;
-import org.apereo.cas.logout.LogoutRequest;
-import org.apereo.cas.services.MultifactorAuthenticationProvider;
+import org.apereo.cas.configuration.model.support.captcha.GoogleRecaptchaProperties;
+import org.apereo.cas.logout.slo.SingleLogoutRequest;
 import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.services.UnauthorizedServiceException;
 import org.apereo.cas.ticket.ServiceTicket;
 import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.registry.TicketRegistrySupport;
+import org.apereo.cas.util.CollectionUtils;
 import org.apereo.cas.util.HttpRequestUtils;
 import org.apereo.cas.web.flow.CasWebflowConstants;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.NonNull;
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.util.Assert;
 import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.util.CookieGenerator;
 import org.springframework.webflow.context.ExternalContextHolder;
 import org.springframework.webflow.context.servlet.ServletExternalContext;
 import org.springframework.webflow.core.collection.MutableAttributeMap;
-import org.springframework.webflow.execution.FlowSession;
+import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
+import org.springframework.webflow.execution.RequestContextHolder;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.Serializable;
 import java.net.URI;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Common utilities for the web tier.
@@ -46,19 +53,13 @@ import java.util.Map;
  * @author Scott Battaglia
  * @since 3.1
  */
-public final class WebUtils {
-
-    /**
-     * Request attribute that contains message key describing details of authorization failure.
-     */
-    public static final String CAS_ACCESS_DENIED_REASON = "CAS_ACCESS_DENIED_REASON";
-
+@Slf4j
+@UtilityClass
+public class WebUtils {
     /**
      * Ticket-granting ticket id parameter used in various flow scopes.
      */
     public static final String PARAMETER_TICKET_GRANTING_TICKET_ID = "ticketGrantingTicketId";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(WebUtils.class);
 
     private static final String PUBLIC_WORKSTATION_ATTRIBUTE = "publicWorkstation";
     private static final String PARAMETER_AUTHENTICATION = "authentication";
@@ -73,12 +74,6 @@ public final class WebUtils {
     private static final String PARAMETER_SERVICE_UI_METADATA = "serviceUIMetadata";
 
     /**
-     * Instantiates a new web utils instance.
-     */
-    private WebUtils() {
-    }
-
-    /**
      * Gets the http servlet request from the context.
      *
      * @param context the context
@@ -86,8 +81,8 @@ public final class WebUtils {
      */
     public static HttpServletRequest getHttpServletRequestFromExternalWebflowContext(final RequestContext context) {
         Assert.isInstanceOf(ServletExternalContext.class, context.getExternalContext(),
-                "Cannot obtain HttpServletRequest from event of type: "
-                        + context.getExternalContext().getClass().getName());
+            "Cannot obtain HttpServletRequest from event of type: "
+                + context.getExternalContext().getClass().getName());
 
         return (HttpServletRequest) context.getExternalContext().getNativeRequest();
     }
@@ -98,14 +93,14 @@ public final class WebUtils {
      * @return the http servlet request
      */
     public static HttpServletRequest getHttpServletRequestFromExternalWebflowContext() {
-        final ServletExternalContext servletExternalContext = (ServletExternalContext) ExternalContextHolder.getExternalContext();
+        val servletExternalContext = (ServletExternalContext) ExternalContextHolder.getExternalContext();
         if (servletExternalContext != null) {
             return (HttpServletRequest) servletExternalContext.getNativeRequest();
         }
         return null;
 
     }
-    
+
     /**
      * Gets the http servlet response from the context.
      *
@@ -114,7 +109,7 @@ public final class WebUtils {
      */
     public static HttpServletResponse getHttpServletResponseFromExternalWebflowContext(final RequestContext context) {
         Assert.isInstanceOf(ServletExternalContext.class, context.getExternalContext(),
-                "Cannot obtain HttpServletResponse from event of type: " + context.getExternalContext().getClass().getName());
+            "Cannot obtain HttpServletResponse from event of type: " + context.getExternalContext().getClass().getName());
         return (HttpServletResponse) context.getExternalContext().getNativeResponse();
     }
 
@@ -124,13 +119,13 @@ public final class WebUtils {
      * @return the http servlet response
      */
     public static HttpServletResponse getHttpServletResponseFromExternalWebflowContext() {
-        final ServletExternalContext servletExternalContext = (ServletExternalContext) ExternalContextHolder.getExternalContext();
+        val servletExternalContext = (ServletExternalContext) ExternalContextHolder.getExternalContext();
         if (servletExternalContext != null) {
             return (HttpServletResponse) servletExternalContext.getNativeResponse();
         }
         return null;
     }
-    
+
 
     /**
      * Gets the service.
@@ -140,7 +135,7 @@ public final class WebUtils {
      * @return the service
      */
     public static WebApplicationService getService(final List<ArgumentExtractor> argumentExtractors, final RequestContext context) {
-        final HttpServletRequest request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
+        val request = WebUtils.getHttpServletRequestFromExternalWebflowContext(context);
         return HttpRequestUtils.getService(argumentExtractors, request);
     }
 
@@ -171,7 +166,7 @@ public final class WebUtils {
      * @param ticket  the ticket value
      */
     public static void putTicketGrantingTicketInScopes(final RequestContext context, final TicketGrantingTicket ticket) {
-        final String ticketValue = ticket != null ? ticket.getId() : null;
+        val ticketValue = ticket != null ? ticket.getId() : null;
         putTicketGrantingTicketInScopes(context, ticketValue);
     }
 
@@ -185,7 +180,7 @@ public final class WebUtils {
         putTicketGrantingTicketIntoMap(context.getRequestScope(), ticketValue);
         putTicketGrantingTicketIntoMap(context.getFlowScope(), ticketValue);
 
-        FlowSession session = context.getFlowExecutionContext().getActiveSession().getParent();
+        var session = context.getFlowExecutionContext().getActiveSession().getParent();
         while (session != null) {
             putTicketGrantingTicketIntoMap(session.getScope(), ticketValue);
             session = session.getParent();
@@ -210,11 +205,19 @@ public final class WebUtils {
      * @return the ticket granting ticket id
      */
     public static String getTicketGrantingTicketId(final RequestContext context) {
-        final String tgtFromRequest = (String) context.getRequestScope().get(PARAMETER_TICKET_GRANTING_TICKET_ID);
-        final String tgtFromFlow = (String) context.getFlowScope().get(PARAMETER_TICKET_GRANTING_TICKET_ID);
-
+        val tgtFromRequest = getTicketGrantingTicketIdFrom(context.getRequestScope());
+        val tgtFromFlow = getTicketGrantingTicketIdFrom(context.getFlowScope());
         return tgtFromRequest != null ? tgtFromRequest : tgtFromFlow;
+    }
 
+    /**
+     * Gets ticket granting ticket id from.
+     *
+     * @param scopeMap the scope map
+     * @return the ticket granting ticket id from
+     */
+    public static String getTicketGrantingTicketIdFrom(final MutableAttributeMap scopeMap) {
+        return (String) scopeMap.get(PARAMETER_TICKET_GRANTING_TICKET_ID);
     }
 
     /**
@@ -253,18 +256,28 @@ public final class WebUtils {
      * @param context the context
      * @return the unauthorized redirect url into flow scope
      */
-    public static URI getUnauthorizedRedirectUrlIntoFlowScope(final RequestContext context) {
+    public static URI getUnauthorizedRedirectUrlFromFlowScope(final RequestContext context) {
         return context.getFlowScope().get(PARAMETER_UNAUTHORIZED_REDIRECT_URL, URI.class);
     }
-    
+
     /**
      * Put logout requests into flow scope.
      *
      * @param context  the context
      * @param requests the requests
      */
-    public static void putLogoutRequests(final RequestContext context, final List<LogoutRequest> requests) {
+    public static void putLogoutRequests(final RequestContext context, final List<SingleLogoutRequest> requests) {
         context.getFlowScope().put(PARAMETER_LOGOUT_REQUESTS, requests);
+    }
+
+    /**
+     * Put logout urls into flow scope.
+     *
+     * @param context the context
+     * @param urls    the requests
+     */
+    public static void putLogoutUrls(final RequestContext context, final Map urls) {
+        context.getFlowScope().put("logoutUrls", urls);
     }
 
     /**
@@ -273,8 +286,8 @@ public final class WebUtils {
      * @param context the context
      * @return the logout requests
      */
-    public static List<LogoutRequest> getLogoutRequests(final RequestContext context) {
-        return (List<LogoutRequest>) context.getFlowScope().get(PARAMETER_LOGOUT_REQUESTS);
+    public static List<SingleLogoutRequest> getLogoutRequests(final RequestContext context) {
+        return (List<SingleLogoutRequest>) context.getFlowScope().get(PARAMETER_LOGOUT_REQUESTS);
     }
 
     /**
@@ -304,7 +317,7 @@ public final class WebUtils {
      * @return warning cookie value, if present.
      */
     public static boolean getWarningCookie(final RequestContext context) {
-        final String val = ObjectUtils.defaultIfNull(context.getFlowScope().get("warnCookieValue"), Boolean.FALSE.toString()).toString();
+        val val = ObjectUtils.defaultIfNull(context.getFlowScope().get("warnCookieValue"), Boolean.FALSE.toString()).toString();
         return Boolean.parseBoolean(val);
     }
 
@@ -326,16 +339,15 @@ public final class WebUtils {
      * @param clazz   the clazz
      * @return the credential
      */
-    public static <T extends Credential> T getCredential(final RequestContext context, final Class<T> clazz) {
-        Assert.notNull(clazz, "clazz cannot be null");
-        final Credential credential = getCredential(context);
+    public static <T extends Credential> T getCredential(final RequestContext context, final @NonNull Class<T> clazz) {
+        val credential = getCredential(context);
         if (credential == null) {
             return null;
         }
         if (!clazz.isAssignableFrom(credential.getClass())) {
             throw new ClassCastException("credential [" + credential.getId()
-                    + " is of type " + credential.getClass()
-                    + " when we were expecting " + clazz);
+                + " is of type " + credential.getClass()
+                + " when we were expecting " + clazz);
         }
         return (T) credential;
     }
@@ -347,11 +359,11 @@ public final class WebUtils {
      * @return the credential, or null if it cant be found in the context or if it has no id.
      */
     public static Credential getCredential(final RequestContext context) {
-        final Credential cFromRequest = (Credential) context.getRequestScope().get(PARAMETER_CREDENTIAL);
-        final Credential cFromFlow = (Credential) context.getFlowScope().get(PARAMETER_CREDENTIAL);
-        final Credential cFromConversation = (Credential) context.getConversationScope().get(PARAMETER_CREDENTIAL);
+        val cFromRequest = (Credential) context.getRequestScope().get(PARAMETER_CREDENTIAL);
+        val cFromFlow = (Credential) context.getFlowScope().get(PARAMETER_CREDENTIAL);
+        val cFromConversation = (Credential) context.getConversationScope().get(PARAMETER_CREDENTIAL);
 
-        Credential credential = cFromRequest;
+        var credential = cFromRequest;
         if (credential == null || StringUtils.isBlank(credential.getId())) {
             credential = cFromFlow;
         }
@@ -364,7 +376,7 @@ public final class WebUtils {
         }
 
         if (credential == null) {
-            final FlowSession session = context.getFlowExecutionContext().getActiveSession();
+            val session = context.getFlowExecutionContext().getActiveSession();
             credential = session.getScope().get(PARAMETER_CREDENTIAL, Credential.class);
         }
         if (credential != null && StringUtils.isBlank(credential.getId())) {
@@ -390,7 +402,7 @@ public final class WebUtils {
             context.getConversationScope().put(PARAMETER_CREDENTIAL, c);
         }
     }
-    
+
 
     /**
      * Is authenticating at a public workstation?
@@ -426,13 +438,13 @@ public final class WebUtils {
      */
     public static void putWarnCookieIfRequestParameterPresent(final CookieGenerator warnCookieGenerator, final RequestContext context) {
         if (warnCookieGenerator != null) {
-            LOGGER.debug("Evaluating request to determine if warning cookie should be generated");
-            final HttpServletResponse response = WebUtils.getHttpServletResponseFromExternalWebflowContext(context);
+            LOGGER.trace("Evaluating request to determine if warning cookie should be generated");
+            val response = WebUtils.getHttpServletResponseFromExternalWebflowContext(context);
             if (StringUtils.isNotBlank(context.getExternalContext().getRequestParameterMap().get("warn"))) {
                 warnCookieGenerator.addCookie(response, "true");
             }
         } else {
-            LOGGER.debug("No warning cookie generator is defined");
+            LOGGER.trace("No warning cookie generator is defined");
         }
     }
 
@@ -475,7 +487,7 @@ public final class WebUtils {
      */
     public static Principal getPrincipalFromRequestContext(final RequestContext requestContext,
                                                            final TicketRegistrySupport ticketRegistrySupport) {
-        final String tgt = WebUtils.getTicketGrantingTicketId(requestContext);
+        val tgt = WebUtils.getTicketGrantingTicketId(requestContext);
         if (StringUtils.isBlank(tgt)) {
             throw new IllegalArgumentException("No ticket-granting ticket could be found in the context");
         }
@@ -512,24 +524,67 @@ public final class WebUtils {
     public static AuthenticationResult getAuthenticationResult(final RequestContext ctx) {
         return ctx.getConversationScope().get(PARAMETER_AUTHENTICATION_RESULT, AuthenticationResult.class);
     }
-    
+
     /**
      * Gets http servlet request user agent.
      *
      * @return the http servlet request user agent
      */
     public static String getHttpServletRequestUserAgentFromRequestContext() {
-        final HttpServletRequest httpServletRequestFromExternalWebflowContext = getHttpServletRequestFromExternalWebflowContext();
-        return HttpRequestUtils.getHttpServletRequestUserAgent(httpServletRequestFromExternalWebflowContext);
+        val request = getHttpServletRequestFromExternalWebflowContext();
+        return HttpRequestUtils.getHttpServletRequestUserAgent(request);
     }
-    
+
+    /**
+     * Gets http servlet request user agent from request context.
+     *
+     * @param context the context
+     * @return the http servlet request user agent from request context
+     */
+    public static String getHttpServletRequestUserAgentFromRequestContext(final RequestContext context) {
+        val request = getHttpServletRequestFromExternalWebflowContext(context);
+        return getHttpServletRequestUserAgentFromRequestContext(request);
+    }
+
+    /**
+     * Gets http servlet request user agent from request context.
+     *
+     * @param request the request
+     * @return the http servlet request user agent from request context
+     */
+    public static String getHttpServletRequestUserAgentFromRequestContext(final HttpServletRequest request) {
+        return HttpRequestUtils.getHttpServletRequestUserAgent(request);
+    }
+
     /**
      * Gets http servlet request geo location.
      *
      * @return the http servlet request geo location
      */
     public static GeoLocationRequest getHttpServletRequestGeoLocationFromRequestContext() {
-        final HttpServletRequest servletRequest = getHttpServletRequestFromExternalWebflowContext();
+        val servletRequest = getHttpServletRequestFromExternalWebflowContext();
+        return getHttpServletRequestGeoLocation(servletRequest);
+    }
+
+    /**
+     * Gets http servlet request geo location from request context.
+     *
+     * @param context the context
+     * @return the http servlet request geo location from request context
+     */
+    public static GeoLocationRequest getHttpServletRequestGeoLocationFromRequestContext(final RequestContext context) {
+        val servletRequest = getHttpServletRequestFromExternalWebflowContext(context);
+        return getHttpServletRequestGeoLocation(servletRequest);
+    }
+
+
+    /**
+     * Gets http servlet request geo location.
+     *
+     * @param servletRequest the servlet request
+     * @return the http servlet request geo location
+     */
+    public static GeoLocationRequest getHttpServletRequestGeoLocation(final HttpServletRequest servletRequest) {
         if (servletRequest != null) {
             return HttpRequestUtils.getHttpServletRequestGeoLocation(servletRequest);
         }
@@ -547,13 +602,17 @@ public final class WebUtils {
     }
 
     /**
-     * Put recaptcha site key into flow scope.
+     * Put recaptcha settings flow scope.
      *
-     * @param context the context
-     * @param value   the value
+     * @param context         the context
+     * @param googleRecaptcha the properties
      */
-    public static void putRecaptchaSiteKeyIntoFlowScope(final RequestContext context, final Object value) {
-        context.getFlowScope().put("recaptchaSiteKey", value);
+    public static void putRecaptchaPropertiesFlowScope(final RequestContext context, final GoogleRecaptchaProperties googleRecaptcha) {
+        val flowScope = context.getFlowScope();
+        flowScope.put("recaptchaSiteKey", googleRecaptcha.getSiteKey());
+        flowScope.put("recaptchaInvisible", googleRecaptcha.isInvisible());
+        flowScope.put("recaptchaPosition", googleRecaptcha.getPosition());
+        flowScope.put("recaptchaVersion", googleRecaptcha.getVersion().name().toLowerCase());
     }
 
     /**
@@ -584,16 +643,6 @@ public final class WebUtils {
      */
     public static void putGoogleAnalyticsTrackingIdIntoFlowScope(final RequestContext context, final Object value) {
         context.getFlowScope().put("googleAnalyticsTrackingId", value);
-    }
-
-    /**
-     * Put unauthorized redirect url into flowscope.
-     *
-     * @param context                 the context
-     * @param unauthorizedRedirectUrl the url to redirect to
-     */
-    public static void putUnauthorizedRedirectUrl(final RequestContext context, final URI unauthorizedRedirectUrl) {
-        context.getFlowScope().put(PARAMETER_UNAUTHORIZED_REDIRECT_URL, unauthorizedRedirectUrl);
     }
 
     /**
@@ -642,7 +691,7 @@ public final class WebUtils {
      * @param context the context
      * @return the boolean
      */
-    public static boolean isRememberMeAuthenticationEnabled(final RequestContext context) {
+    public static Boolean isRememberMeAuthenticationEnabled(final RequestContext context) {
         return context.getFlowScope().getBoolean("rememberMeAuthenticationEnabled", Boolean.FALSE);
     }
 
@@ -654,7 +703,8 @@ public final class WebUtils {
      */
     public static void putResolvedMultifactorAuthenticationProviders(final RequestContext context,
                                                                      final Collection<MultifactorAuthenticationProvider> value) {
-        context.getConversationScope().put("resolvedMultifactorAuthenticationProviders", value);
+        val providerIds = value.stream().map(MultifactorAuthenticationProvider::getId).collect(Collectors.toSet());
+        context.getConversationScope().put("resolvedMultifactorAuthenticationProviders", providerIds);
     }
 
     /**
@@ -663,7 +713,7 @@ public final class WebUtils {
      * @param context the context
      * @return the resolved multifactor authentication providers
      */
-    public static Collection<MultifactorAuthenticationProvider> getResolvedMultifactorAuthenticationProviders(final RequestContext context) {
+    public static Collection<String> getResolvedMultifactorAuthenticationProviders(final RequestContext context) {
         return context.getConversationScope().get("resolvedMultifactorAuthenticationProviders", Collection.class);
     }
 
@@ -698,11 +748,21 @@ public final class WebUtils {
      * Put service response into request scope.
      *
      * @param requestContext the request context
+     * @param url            the url
+     */
+    public static void putServiceRedirectUrl(final RequestContext requestContext, final String url) {
+        requestContext.getRequestScope().put("url", url);
+    }
+
+    /**
+     * Put service response into request scope.
+     *
+     * @param requestContext the request context
      * @param response       the response
      */
     public static void putServiceResponseIntoRequestScope(final RequestContext requestContext, final Response response) {
         requestContext.getRequestScope().put("parameters", response.getAttributes());
-        requestContext.getRequestScope().put("url", response.getUrl());
+        putServiceRedirectUrl(requestContext, response.getUrl());
     }
 
     /**
@@ -731,8 +791,193 @@ public final class WebUtils {
      * @return the model and view
      */
     public static ModelAndView produceErrorView(final Exception e) {
-        final Map model = new HashMap<>();
-        model.put("rootCauseException", e);
-        return new ModelAndView(CasWebflowConstants.VIEW_ID_SERVICE_ERROR, model);
+        return new ModelAndView(CasWebflowConstants.VIEW_ID_SERVICE_ERROR, CollectionUtils.wrap("rootCauseException", e));
+    }
+
+    /**
+     * Gets in progress authentication.
+     *
+     * @return the in progress authentication
+     */
+    public static Authentication getInProgressAuthentication() {
+        val context = RequestContextHolder.getRequestContext();
+        val authentication = context != null ? WebUtils.getAuthentication(context) : null;
+        if (authentication == null) {
+            return AuthenticationCredentialsThreadLocalBinder.getInProgressAuthentication();
+        }
+        return authentication;
+    }
+
+    /**
+     * Put passwordless authentication enabled.
+     *
+     * @param requestContext the request context
+     * @param value          the value
+     */
+    public static void putPasswordlessAuthenticationEnabled(final RequestContext requestContext, final Boolean value) {
+        requestContext.getFlowScope().put("passwordlessAuthenticationEnabled", value);
+    }
+
+    /**
+     * Put passwordless authentication account.
+     *
+     * @param requestContext the request context
+     * @param account        the account
+     */
+    public static void putPasswordlessAuthenticationAccount(final RequestContext requestContext, final Object account) {
+        requestContext.getFlowScope().put("passwordlessAccount", account);
+    }
+
+    /**
+     * Gets passwordless authentication account.
+     *
+     * @param <T>   the type parameter
+     * @param event the event
+     * @param clazz the clazz
+     * @return the passwordless authentication account
+     */
+    public static <T> T getPasswordlessAuthenticationAccount(final Event event, final Class<T> clazz) {
+        return event.getAttributes().get("passwordlessAccount", clazz);
+    }
+
+    /**
+     * Gets passwordless authentication account.
+     *
+     * @param <T>   the type parameter
+     * @param event the event
+     * @param clazz the clazz
+     * @return the passwordless authentication account
+     */
+    public static <T> T getPasswordlessAuthenticationAccount(final RequestContext event, final Class<T> clazz) {
+        return getPasswordlessAuthenticationAccount(event.getCurrentEvent(), clazz);
+    }
+
+    /**
+     * Has passwordless authentication account.
+     *
+     * @param requestContext the request context
+     * @return the boolean
+     */
+    public static boolean hasPasswordlessAuthenticationAccount(final RequestContext requestContext) {
+        return requestContext.getFlowScope().contains("passwordlessAccount");
+    }
+
+    /**
+     * Put request surrogate authentication.
+     *
+     * @param context the context
+     * @param value   the value
+     */
+    public static void putRequestSurrogateAuthentication(final RequestContext context, final Boolean value) {
+        context.getFlowScope().put("requestSurrogateAccount", value);
+    }
+
+    /**
+     * Has request surrogate authentication request.
+     *
+     * @param requestContext the request context
+     * @return the boolean
+     */
+    public static boolean hasRequestSurrogateAuthenticationRequest(final RequestContext requestContext) {
+        return requestContext.getFlowScope().getBoolean("requestSurrogateAccount", Boolean.FALSE);
+    }
+
+    /**
+     * Has request surrogate authentication request.
+     *
+     * @param requestContext the request context
+     */
+    public static void removeRequestSurrogateAuthenticationRequest(final RequestContext requestContext) {
+        requestContext.getFlowScope().remove("requestSurrogateAccount");
+    }
+
+    /**
+     * Put surrogate authentication accounts.
+     *
+     * @param requestContext the request context
+     * @param surrogates     the surrogates
+     */
+    public static void putSurrogateAuthenticationAccounts(final RequestContext requestContext, final List<String> surrogates) {
+        requestContext.getFlowScope().put("surrogates", surrogates);
+    }
+
+    /**
+     * Gets surrogate authentication accounts.
+     *
+     * @param requestContext the request context
+     * @return the surrogate authentication accounts
+     */
+    public static List<String> getSurrogateAuthenticationAccounts(final RequestContext requestContext) {
+        return requestContext.getFlowScope().get("surrogates", List.class);
+    }
+
+    /**
+     * Put graphical user authentication enabled.
+     *
+     * @param requestContext the request context
+     * @param value          the value
+     */
+    public static void putGraphicalUserAuthenticationEnabled(final RequestContext requestContext, final Boolean value) {
+        requestContext.getFlowScope().put("guaEnabled", value);
+    }
+
+    /**
+     * Put graphical user authentication username.
+     *
+     * @param requestContext the request context
+     * @param username       the username
+     */
+    public static void putGraphicalUserAuthenticationUsername(final RequestContext requestContext, final String username) {
+        requestContext.getFlowScope().put("guaUsername", username);
+    }
+
+    /**
+     * Contains graphical user authentication username.
+     *
+     * @param requestContext the request context
+     * @return the boolean
+     */
+    public static boolean containsGraphicalUserAuthenticationUsername(final RequestContext requestContext) {
+        return requestContext.getFlowScope().contains("guaUsername");
+    }
+
+    /**
+     * Put graphical user authentication image.
+     *
+     * @param requestContext the request context
+     * @param image          the image
+     */
+    public static void putGraphicalUserAuthenticationImage(final RequestContext requestContext, final String image) {
+        requestContext.getFlowScope().put("guaUserImage", image);
+    }
+
+    /**
+     * Contains graphical user authentication image boolean.
+     *
+     * @param requestContext the request context
+     * @return the boolean
+     */
+    public static boolean containsGraphicalUserAuthenticationImage(final RequestContext requestContext) {
+        return requestContext.getFlowScope().contains("guaUserImage");
+    }
+
+    /**
+     * Put delegated authentication provider dominant.
+     *
+     * @param context the context
+     * @param client  the client
+     */
+    public static void putDelegatedAuthenticationProviderDominant(final RequestContext context, final Object client) {
+        context.getFlowScope().put("delegatedAuthenticationProviderDominant", client);
+    }
+
+    /**
+     * Put available authentication handle names.
+     *
+     * @param context           the context
+     * @param availableHandlers the available handlers
+     */
+    public static void putAvailableAuthenticationHandleNames(final RequestContext context, final Collection<String> availableHandlers) {
+        context.getFlowScope().put("availableAuthenticationHandlerNames", availableHandlers);
     }
 }

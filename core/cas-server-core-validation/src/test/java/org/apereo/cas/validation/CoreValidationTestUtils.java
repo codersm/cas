@@ -4,9 +4,11 @@ import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
 import org.apereo.cas.services.RegisteredServiceTestUtils;
 
+import lombok.experimental.UtilityClass;
+import lombok.val;
+
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 
 /**
  * This is {@link CoreValidationTestUtils}.
@@ -14,11 +16,10 @@ import java.util.List;
  * @author Misagh Moayyed
  * @since 4.2.0
  */
-public final class CoreValidationTestUtils {
+@UtilityClass
+public class CoreValidationTestUtils {
 
     private static final String[] CONST_NO_PRINCIPALS = new String[0];
-
-    private CoreValidationTestUtils() {}
 
     public static Assertion getAssertion(final boolean fromNewLogin) {
         return getAssertion(fromNewLogin, CONST_NO_PRINCIPALS);
@@ -26,12 +27,12 @@ public final class CoreValidationTestUtils {
 
     public static Assertion getAssertion(final boolean fromNewLogin,
                                          final String[] extraPrincipals) {
-        final List<Authentication> list = new ArrayList<>();
+        val list = new ArrayList<Authentication>();
         list.add(CoreAuthenticationTestUtils.getAuthentication());
 
         Arrays.stream(extraPrincipals).map(CoreAuthenticationTestUtils::getAuthentication).forEach(list::add);
         return new ImmutableAssertion(CoreAuthenticationTestUtils.getAuthentication(),
-                list, RegisteredServiceTestUtils.getService(), fromNewLogin);
+            list, fromNewLogin, RegisteredServiceTestUtils.getService());
     }
 
 }

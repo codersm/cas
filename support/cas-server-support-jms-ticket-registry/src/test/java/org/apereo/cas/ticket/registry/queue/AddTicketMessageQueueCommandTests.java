@@ -5,6 +5,8 @@ import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
 import org.apereo.cas.ticket.TicketGrantingTicket;
 import org.apereo.cas.ticket.TicketGrantingTicketImpl;
 import org.apereo.cas.ticket.support.NeverExpiresExpirationPolicy;
+
+import lombok.val;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -16,13 +18,13 @@ import static org.junit.Assert.*;
  * @since 5.2.0
  */
 public class AddTicketMessageQueueCommandTests extends AbstractTicketMessageQueueCommandTests {
-    
+
     @Test
     public void verifyAddTicket() {
         TicketGrantingTicket ticket = new TicketGrantingTicketImpl("TGT", CoreAuthenticationTestUtils.getAuthentication(),
-                new NeverExpiresExpirationPolicy());
+            new NeverExpiresExpirationPolicy());
         ticketRegistry.addTicket(ticket);
-        final AddTicketMessageQueueCommand cmd = new AddTicketMessageQueueCommand(new StringBean(), ticket);
+        val cmd = new AddTicketMessageQueueCommand(new StringBean(), ticket);
         cmd.execute(ticketRegistry);
         ticket = ticketRegistry.getTicket(ticket.getId(), ticket.getClass());
         assertNotNull(ticket);

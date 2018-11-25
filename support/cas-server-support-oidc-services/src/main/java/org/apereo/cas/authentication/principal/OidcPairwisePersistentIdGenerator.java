@@ -1,5 +1,6 @@
 package org.apereo.cas.authentication.principal;
 
+
 /**
  * This is {@link OidcPairwisePersistentIdGenerator}.
  *

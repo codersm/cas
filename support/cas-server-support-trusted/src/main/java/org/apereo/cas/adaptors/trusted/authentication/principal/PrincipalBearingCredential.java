@@ -1,11 +1,14 @@
 package org.apereo.cas.adaptors.trusted.authentication.principal;
 
+import org.apereo.cas.authentication.credential.AbstractCredential;
+import org.apereo.cas.authentication.principal.Principal;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import org.apereo.cas.authentication.AbstractCredential;
-import org.apereo.cas.authentication.principal.Principal;
-import org.springframework.util.Assert;
+import lombok.Getter;
+import lombok.NonNull;
+import lombok.ToString;
 
 /**
  * Credential that bear the fully resolved and authenticated Principal, or an
@@ -21,12 +24,18 @@ import org.springframework.util.Assert;
  * @author Andrew Petro
  * @since 3.0.0
  */
+@Getter
+@ToString(callSuper = true)
 public class PrincipalBearingCredential extends AbstractCredential {
 
-    /** Serialization version marker. */
+    /**
+     * Serialization version marker.
+     */
     private static final long serialVersionUID = 8866786438439775669L;
 
-    /** The trusted principal. */
+    /**
+     * The trusted principal.
+     */
     private Principal principal;
 
     /**
@@ -35,18 +44,8 @@ public class PrincipalBearingCredential extends AbstractCredential {
      * @param principal the principal
      */
     @JsonCreator
-    public PrincipalBearingCredential(@JsonProperty("principal") final Principal principal) {
-        Assert.notNull(principal, "principal cannot be null");
+    public PrincipalBearingCredential(@JsonProperty("principal") final @NonNull Principal principal) {
         this.principal = principal;
-    }
-
-    /**
-     * Get the previously authenticated Principal.
-     *
-     * @return authenticated Principal
-     */
-    public Principal getPrincipal() {
-        return this.principal;
     }
 
     @JsonIgnore

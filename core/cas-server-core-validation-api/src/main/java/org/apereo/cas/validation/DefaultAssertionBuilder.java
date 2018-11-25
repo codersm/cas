@@ -3,6 +3,8 @@ package org.apereo.cas.validation;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.principal.Service;
 
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -12,6 +14,7 @@ import java.util.List;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Getter
 public class DefaultAssertionBuilder {
     /**
      * The Auth.
@@ -78,6 +81,6 @@ public class DefaultAssertionBuilder {
      * @return the assertion
      */
     public Assertion build() {
-        return new ImmutableAssertion(this.auth, this.authentications, this.service, this.newLogin);
+        return new ImmutableAssertion(this.auth, this.authentications, this.newLogin, this.service);
     }
 }

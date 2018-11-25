@@ -1,5 +1,12 @@
 package org.apereo.cas.support.saml.services.idp.metadata;
 
+import org.apereo.cas.util.EncodingUtils;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.GenericGenerator;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
@@ -21,21 +28,29 @@ import javax.persistence.Table;
 @Entity
 @Table(name = "SamlMetadataDocument")
 @Document
+@Getter
+@Setter
+@AllArgsConstructor
 public class SamlMetadataDocument {
+
+    @JsonProperty("id")
     @javax.persistence.Id
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO, generator = "native")
     @GenericGenerator(name = "native", strategy = "native")
     private long id = -1;
 
+    @JsonProperty("name")
     @Indexed
-    @Column(length = 255, updatable = true, insertable = true, nullable = false)
+    @Column(nullable = false)
     private String name;
 
+    @JsonProperty("value")
     @Lob
     @Column(name = "value", length = Integer.MAX_VALUE)
     private String value;
 
+    @JsonProperty("signature")
     @Lob
     @Column(name = "signature", length = Integer.MAX_VALUE)
     private String signature;
@@ -44,35 +59,16 @@ public class SamlMetadataDocument {
         setId(System.currentTimeMillis());
     }
 
-    public long getId() {
-        return id;
-    }
-
-    public void setId(final long id) {
-        this.id = id;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public void setName(final String name) {
-        this.name = name;
-    }
-
-    public String getValue() {
+    /**
+     * Gets base-64 decoded value if needed, or the value itself.
+     *
+     * @return the decoded value
+     */
+    @JsonIgnore
+    public String getDecodedValue() {
+        if (EncodingUtils.isBase64(value)) {
+            return EncodingUtils.decodeBase64ToString(value);
+        }
         return value;
-    }
-
-    public void setValue(final String value) {
-        this.value = value;
-    }
-
-    public String getSignature() {
-        return signature;
-    }
-
-    public void setSignature(final String signature) {
-        this.signature = signature;
     }
 }

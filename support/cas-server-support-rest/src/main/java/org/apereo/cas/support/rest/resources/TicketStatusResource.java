@@ -2,9 +2,10 @@ package org.apereo.cas.support.rest.resources;
 
 import org.apereo.cas.CentralAuthenticationService;
 import org.apereo.cas.ticket.InvalidTicketException;
-import org.apereo.cas.ticket.Ticket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,15 +28,10 @@ import org.springframework.web.bind.annotation.RestController;
  * @since 4.1.0
  */
 @RestController("ticketStatusResourceRestController")
+@Slf4j
+@RequiredArgsConstructor
 public class TicketStatusResource {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(TicketStatusResource.class);
-
     private final CentralAuthenticationService centralAuthenticationService;
-
-    public TicketStatusResource(final CentralAuthenticationService centralAuthenticationService) {
-        this.centralAuthenticationService = centralAuthenticationService;
-    }
 
     /**
      * Determine the status of a given ticket id, whether it's valid, exists, expired, etc.
@@ -46,7 +42,7 @@ public class TicketStatusResource {
     @GetMapping(value = "/v1/tickets/{id:.+}")
     public ResponseEntity<String> getTicketStatus(@PathVariable("id") final String id) {
         try {
-            final Ticket ticket = this.centralAuthenticationService.getTicket(id);
+            val ticket = this.centralAuthenticationService.getTicket(id);
             return new ResponseEntity<>(ticket.getId(), HttpStatus.OK);
         } catch (final InvalidTicketException e) {
             return new ResponseEntity<>("Ticket could not be found", HttpStatus.NOT_FOUND);

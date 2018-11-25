@@ -1,10 +1,11 @@
 package org.apereo.cas.ticket.support;
 
+import org.apereo.cas.ticket.TicketState;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apereo.cas.ticket.TicketState;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 
 /**
  * AlwaysExpiresExpirationPolicy always answers true when asked if a Ticket is
@@ -13,19 +14,15 @@ import org.apereo.cas.ticket.TicketState;
  * @author Misagh Moayyed
  * @since 4.2
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
 public class AlwaysExpiresExpirationPolicy extends AbstractCasExpirationPolicy {
 
     /**
      * Serializable Unique ID.
      */
     private static final long serialVersionUID = 3836547698242303540L;
-
-    /**
-     * Instantiates a new Always expires expiration policy.
-     */
-    public AlwaysExpiresExpirationPolicy() {
-    }
 
     @Override
     public boolean isExpired(final TicketState ticketState) {
@@ -44,23 +41,4 @@ public class AlwaysExpiresExpirationPolicy extends AbstractCasExpirationPolicy {
         return 0L;
     }
 
-
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        return new EqualsBuilder().isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder().toHashCode();
-    }
 }

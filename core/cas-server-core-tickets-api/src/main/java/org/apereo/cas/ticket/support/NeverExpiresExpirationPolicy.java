@@ -1,11 +1,13 @@
 package org.apereo.cas.ticket.support;
 
+import org.apereo.cas.ticket.TicketState;
+
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apereo.cas.ticket.TicketState;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 /**
  * NeverExpiresExpirationPolicy always answers false when asked if a Ticket is
@@ -16,16 +18,16 @@ import org.apereo.cas.ticket.TicketState;
  * @since 3.0.0
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeInfo(use=JsonTypeInfo.Id.CLASS, include= JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class NeverExpiresExpirationPolicy extends AbstractCasExpirationPolicy {
 
-    /** Serializable Unique ID. */
-    private static final long serialVersionUID = 3833747698242303540L;
-
     /**
-     * Instantiates a new Never expires expiration policy.
+     * Serializable Unique ID.
      */
-    public NeverExpiresExpirationPolicy() {}
+    private static final long serialVersionUID = 3833747698242303540L;
 
     @Override
     public boolean isExpired(final TicketState ticketState) {
@@ -43,25 +45,5 @@ public class NeverExpiresExpirationPolicy extends AbstractCasExpirationPolicy {
     public Long getTimeToIdle() {
         return (long) Integer.MAX_VALUE;
     }
-    
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        return new EqualsBuilder()
-                .isEquals();
-    }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder()
-                .toHashCode();
-    }
 }

@@ -8,9 +8,9 @@ import org.apereo.cas.ticket.registry.queue.BaseMessageQueueCommand;
 import org.apereo.cas.ticket.registry.queue.DeleteTicketMessageQueueCommand;
 import org.apereo.cas.ticket.registry.queue.DeleteTicketsMessageQueueCommand;
 import org.apereo.cas.ticket.registry.queue.UpdateTicketMessageQueueCommand;
-import org.apereo.cas.util.cipher.NoOpCipherExecutor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.jms.core.JmsTemplate;
 
 /**
@@ -19,21 +19,20 @@ import org.springframework.jms.core.JmsTemplate;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
 public class JmsTicketRegistry extends DefaultTicketRegistry {
     /**
      * Queue destination name.
      */
     public static final String QUEUE_DESTINATION = "CasJmsTicketRegistry";
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(JmsTicketRegistry.class);
-
     private final JmsTemplate jmsTemplate;
     private final StringBean id;
 
     public JmsTicketRegistry(final JmsTemplate jmsTemplate, final StringBean id) {
-        this(jmsTemplate, id, NoOpCipherExecutor.getInstance());
+        this(jmsTemplate, id, CipherExecutor.noOp());
     }
-    
+
     public JmsTicketRegistry(final JmsTemplate jmsTemplate, final StringBean id, final CipherExecutor cipherExecutor) {
         super(cipherExecutor);
         this.jmsTemplate = jmsTemplate;
@@ -48,21 +47,21 @@ public class JmsTicketRegistry extends DefaultTicketRegistry {
 
     @Override
     public boolean deleteSingleTicket(final String ticketId) {
-        final boolean result = super.deleteSingleTicket(ticketId);
+        val result = super.deleteSingleTicket(ticketId);
         publishMessageToQueue(new DeleteTicketMessageQueueCommand(id, ticketId));
         return result;
     }
 
     @Override
     public long deleteAll() {
-        final long result = super.deleteAll();
+        val result = super.deleteAll();
         publishMessageToQueue(new DeleteTicketsMessageQueueCommand(id));
         return result;
     }
 
     @Override
     public Ticket updateTicket(final Ticket ticket) {
-        final Ticket result = super.updateTicket(ticket);
+        val result = super.updateTicket(ticket);
         publishMessageToQueue(new UpdateTicketMessageQueueCommand(id, ticket));
         return result;
     }

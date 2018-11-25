@@ -1,8 +1,16 @@
 package org.apereo.cas.web.flow.services;
 
 import org.apereo.cas.services.RegisteredService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.util.StringUtils;
 
 import java.io.Serializable;
@@ -15,19 +23,19 @@ import java.util.Collection;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@Slf4j
+@Getter
+@RequiredArgsConstructor
 public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
 
     private static final int DEFAULT_IMAGE_SIZE = 32;
+
     private static final long serialVersionUID = -2416684486715358748L;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(DefaultRegisteredServiceUserInterfaceInfo.class);
-    
-    /** the registered service. **/
+    /**
+     * the registered service.
+     **/
     protected final RegisteredService registeredService;
-
-    public DefaultRegisteredServiceUserInterfaceInfo(final RegisteredService registeredService) {
-        this.registeredService = registeredService;
-    }
 
     /**
      * Gets description.
@@ -35,7 +43,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      * @return the description
      */
     public String getDescription() {
-        final Collection<String> items = getDescriptions();
+        val items = getDescriptions();
         if (items.isEmpty()) {
             return this.registeredService.getDescription();
         }
@@ -48,7 +56,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      * @return the display name
      */
     public String getDisplayName() {
-        final Collection<String> items = getDisplayNames();
+        val items = getDisplayNames();
         if (items.isEmpty()) {
             return this.registeredService.getName();
         }
@@ -74,7 +82,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      * @return the information uRL
      */
     public String getInformationURL() {
-        final Collection<String> items = getInformationURLs();
+        val items = getInformationURLs();
         if (items.isEmpty()) {
             return this.registeredService.getInformationUrl();
         }
@@ -90,14 +98,13 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
         return new ArrayList<>(0);
     }
 
-
     /**
      * Gets privacy statement uRL.
      *
      * @return the privacy statement uRL
      */
     public String getPrivacyStatementURL() {
-        final Collection<String> items = getPrivacyStatementURLs();
+        val items = getPrivacyStatementURLs();
         if (items.isEmpty()) {
             return this.registeredService.getPrivacyUrl();
         }
@@ -120,7 +127,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      */
     public long getLogoWidth() {
         try {
-            final Collection<Logo> items = getLogoUrls();
+            val items = getLogoUrls();
             if (!items.isEmpty()) {
                 return items.iterator().next().getWidth();
             }
@@ -137,7 +144,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      */
     public long getLogoHeight() {
         try {
-            final Collection<Logo> items = getLogoUrls();
+            val items = getLogoUrls();
             if (!items.isEmpty()) {
                 return items.iterator().next().getHeight();
             }
@@ -154,7 +161,7 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
      */
     public String getLogoUrl() {
         try {
-            final Collection<Logo> items = getLogoUrls();
+            val items = getLogoUrls();
             if (!items.isEmpty()) {
                 return items.iterator().next().getUrl();
             }
@@ -176,45 +183,20 @@ public class DefaultRegisteredServiceUserInterfaceInfo implements Serializable {
     /**
      * The Logo wrapper class for services UI.
      */
+    @AllArgsConstructor
+    @NoArgsConstructor
+    @Getter
+    @Setter
+    @EqualsAndHashCode
+    @ToString
     public static class Logo implements Serializable {
 
         private static final long serialVersionUID = -1434231982864628179L;
 
         private String url;
+
         private long height = DEFAULT_IMAGE_SIZE;
+
         private long width = DEFAULT_IMAGE_SIZE;
-
-        public Logo() {
-        }
-
-        public Logo(final String url, final long height, final long width) {
-            this.url = url;
-            this.height = height;
-            this.width = width;
-        }
-
-        public long getHeight() {
-            return height;
-        }
-
-        public void setHeight(final long height) {
-            this.height = height;
-        }
-
-        public long getWidth() {
-            return width;
-        }
-
-        public void setWidth(final long width) {
-            this.width = width;
-        }
-
-        public String getUrl() {
-            return url;
-        }
-
-        public void setUrl(final String url) {
-            this.url = url;
-        }
     }
 }

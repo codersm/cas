@@ -1,11 +1,14 @@
 package org.apereo.cas.adaptors.u2f.storage;
 
-import com.yubico.u2f.data.DeviceRegistration;
 import org.apereo.cas.util.crypto.CertUtils;
+
+import com.yubico.u2f.data.DeviceRegistration;
+import lombok.SneakyThrows;
+import lombok.val;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
+import org.springframework.test.annotation.DirtiesContext;
 
-import java.security.cert.X509Certificate;
 import java.util.Collection;
 
 import static org.junit.Assert.*;
@@ -16,16 +19,31 @@ import static org.junit.Assert.*;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@DirtiesContext
 public abstract class AbstractU2FDeviceRepositoryTests {
 
     @Test
     public void verifyDeviceSaved() {
-        final X509Certificate cert = CertUtils.readCertificate(new ClassPathResource("cert.crt"));
-        final DeviceRegistration r1 = new DeviceRegistration("keyhandle11", "publickey1", cert, 1);
-        final DeviceRegistration r2 = new DeviceRegistration("keyhandle22", "publickey1", cert, 2);
-        getDeviceRepository().registerDevice("casuser", r1);
-        getDeviceRepository().registerDevice("casuser", r2);
-        final Collection<DeviceRegistration> devs = getDeviceRepository().getRegisteredDevices("casuser");
+        try {
+            val deviceRepository = getDeviceRepository();
+            registerDevices(deviceRepository);
+            val devs = deviceRepository.getRegisteredDevices("casuser");
+            verifyDevicesAvailable(devs);
+        } catch (final Exception e) {
+            throw new AssertionError(e.getMessage(), e);
+        }
+    }
+
+    @SneakyThrows
+    protected void registerDevices(final U2FDeviceRepository deviceRepository) {
+        val cert = CertUtils.readCertificate(new ClassPathResource("cert.crt"));
+        val r1 = new DeviceRegistration("keyhandle11", "publickey1", cert, 1);
+        val r2 = new DeviceRegistration("keyhandle22", "publickey1", cert, 2);
+        deviceRepository.registerDevice("casuser", r1);
+        deviceRepository.registerDevice("casuser", r2);
+    }
+
+    protected void verifyDevicesAvailable(final Collection<? extends DeviceRegistration> devs) {
         assertEquals(2, devs.size());
     }
 

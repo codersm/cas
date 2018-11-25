@@ -1,5 +1,6 @@
 package org.apereo.cas.util.spring.boot;
 
+
 /**
  * This is {@link DefaultCasBanner}.
  *
@@ -7,5 +8,4 @@ package org.apereo.cas.util.spring.boot;
  * @since 5.1.0
  */
 public class DefaultCasBanner extends AbstractCasBanner {
-
 }

@@ -1,8 +1,10 @@
 package org.apereo.cas.authentication.handler.support;
 
 import org.apereo.cas.services.RegisteredServiceTestUtils;
-import org.apereo.cas.util.http.HttpClient;
+import org.apereo.cas.util.CollectionUtils;
 import org.apereo.cas.util.http.SimpleHttpClientFactoryBean;
+
+import lombok.val;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -24,7 +26,7 @@ public class HttpBasedServiceCredentialsAuthenticationHandlerTests {
     private HttpBasedServiceCredentialsAuthenticationHandler authenticationHandler;
 
     @Before
-    public void setUp() throws Exception {
+    public void initialize() {
         this.authenticationHandler = new HttpBasedServiceCredentialsAuthenticationHandler("", null, null, null, new SimpleHttpClientFactoryBean().getObject());
     }
 
@@ -36,7 +38,7 @@ public class HttpBasedServiceCredentialsAuthenticationHandlerTests {
     @Test
     public void verifyDoesntSupportBadUserCredentials() {
         assertFalse(this.authenticationHandler.supports(
-                RegisteredServiceTestUtils.getCredentialsWithDifferentUsernameAndPassword("test", "test2")));
+            RegisteredServiceTestUtils.getCredentialsWithDifferentUsernameAndPassword("test", "test2")));
     }
 
     @Test
@@ -47,7 +49,7 @@ public class HttpBasedServiceCredentialsAuthenticationHandlerTests {
     @Test
     public void verifyRejectsInProperCertificateCredentials() throws Exception {
         this.thrown.expect(FailedLoginException.class);
-        this.thrown.expectMessage("https://clearinghouse.ja-sig.org sent an unacceptable response status code");
+
 
         this.authenticationHandler.authenticate(RegisteredServiceTestUtils.getHttpBasedServiceCredentials("https://clearinghouse.ja-sig.org"));
     }
@@ -60,21 +62,16 @@ public class HttpBasedServiceCredentialsAuthenticationHandlerTests {
     @Test
     public void verifyNoAcceptableStatusCode() throws Exception {
         this.thrown.expect(FailedLoginException.class);
-        this.thrown.expectMessage("https://clue.acs.rutgers.edu sent an unacceptable response status code");
-
         this.authenticationHandler.authenticate(RegisteredServiceTestUtils.getHttpBasedServiceCredentials("https://clue.acs.rutgers.edu"));
     }
 
     @Test
     public void verifyNoAcceptableStatusCodeButOneSet() throws Exception {
-        final SimpleHttpClientFactoryBean clientFactory = new SimpleHttpClientFactoryBean();
-        clientFactory.setAcceptableCodes(new int[] {900});
-        final HttpClient httpClient = clientFactory.getObject();
+        val clientFactory = new SimpleHttpClientFactoryBean();
+        clientFactory.setAcceptableCodes(CollectionUtils.wrapList(900));
+        val httpClient = clientFactory.getObject();
         this.authenticationHandler = new HttpBasedServiceCredentialsAuthenticationHandler("", null, null, null, httpClient);
-
         this.thrown.expect(FailedLoginException.class);
-        this.thrown.expectMessage("https://www.ja-sig.org sent an unacceptable response status code");
-
         this.authenticationHandler.authenticate(RegisteredServiceTestUtils.getHttpBasedServiceCredentials("https://www.ja-sig.org"));
     }
 }

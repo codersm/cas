@@ -1,6 +1,6 @@
 package org.apereo.cas.trusted.authentication.api;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 /**
@@ -16,7 +16,7 @@ public interface MultifactorAuthenticationTrustStorage {
      *
      * @param onOrBefore the on or before
      */
-    void expire(LocalDate onOrBefore);
+    void expire(LocalDateTime onOrBefore);
 
     /**
      * Expire device by registration key.
@@ -31,7 +31,7 @@ public interface MultifactorAuthenticationTrustStorage {
      * @param onOrAfterDate the on or after date
      * @return the records
      */
-    Set<MultifactorAuthenticationTrustRecord> get(LocalDate onOrAfterDate);
+    Set<? extends MultifactorAuthenticationTrustRecord> get(LocalDateTime onOrAfterDate);
 
     /**
      * Get record.
@@ -39,7 +39,7 @@ public interface MultifactorAuthenticationTrustStorage {
      * @param principal the principal id
      * @return the records
      */
-    Set<MultifactorAuthenticationTrustRecord> get(String principal);
+    Set<? extends MultifactorAuthenticationTrustRecord> get(String principal);
 
     /**
      * Get record by date.
@@ -48,7 +48,7 @@ public interface MultifactorAuthenticationTrustStorage {
      * @param onOrAfterDate the on or after date
      * @return the optional
      */
-    Set<MultifactorAuthenticationTrustRecord> get(String principal, LocalDate onOrAfterDate);
+    Set<? extends MultifactorAuthenticationTrustRecord> get(String principal, LocalDateTime onOrAfterDate);
 
     /**
      * Set trusted record.

@@ -1,6 +1,7 @@
 package org.apereo.cas.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -20,12 +21,9 @@ public class RegisteredServicePublicKeyImplTests {
 
     @Test
     public void verifySerializeAX509CertificateCredentialToJson() throws IOException {
-        final RegisteredServicePublicKeyImpl publicKeyWritten = new RegisteredServicePublicKeyImpl("location", "algorithm");
-
+        val publicKeyWritten = new RegisteredServicePublicKeyImpl("location", "algorithm");
         MAPPER.writeValue(JSON_FILE, publicKeyWritten);
-
-        final RegisteredServicePublicKey credentialRead = MAPPER.readValue(JSON_FILE, RegisteredServicePublicKeyImpl.class);
-
+        val credentialRead = MAPPER.readValue(JSON_FILE, RegisteredServicePublicKeyImpl.class);
         assertEquals(publicKeyWritten, credentialRead);
     }
 }

@@ -5,10 +5,10 @@ import org.apereo.cas.authentication.adaptive.AdaptiveAuthenticationPolicy;
 import org.apereo.cas.web.flow.resolver.CasDelegatingWebflowEventResolver;
 import org.apereo.cas.web.flow.resolver.CasWebflowEventResolver;
 import org.apereo.cas.web.support.WebUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.binding.message.MessageBuilder;
-import org.springframework.binding.message.MessageResolver;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
 
@@ -19,10 +19,9 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Scott Battaglia
  * @since 3.0.0
  */
+@Slf4j
 public abstract class AbstractNonInteractiveCredentialsAction extends AbstractAuthenticationAction {
     private static final String BAD_X509_CREDENTIALS_MSG_CODE = "error.x509.credentials.bad";
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(AbstractNonInteractiveCredentialsAction.class);
 
     public AbstractNonInteractiveCredentialsAction(final CasDelegatingWebflowEventResolver initialAuthenticationAttemptWebflowEventResolver,
                                                    final CasWebflowEventResolver serviceTicketRequestWebflowEventResolver,
@@ -32,7 +31,7 @@ public abstract class AbstractNonInteractiveCredentialsAction extends AbstractAu
 
     @Override
     protected Event doPreExecute(final RequestContext context) throws Exception {
-        final Credential credential = constructCredentialsFromRequest(context);
+        val credential = constructCredentialsFromRequest(context);
         if (credential == null) {
             LOGGER.warn("No credentials detected. Navigating to error...");
             return error();
@@ -43,11 +42,11 @@ public abstract class AbstractNonInteractiveCredentialsAction extends AbstractAu
 
     @Override
     protected void onError(final RequestContext requestContext) {
-        final MessageResolver resolver = new MessageBuilder()
-                .error()
-                .code(BAD_X509_CREDENTIALS_MSG_CODE)
-                .defaultText(BAD_X509_CREDENTIALS_MSG_CODE)
-                .build();
+        val resolver = new MessageBuilder()
+            .error()
+            .code(BAD_X509_CREDENTIALS_MSG_CODE)
+            .defaultText(BAD_X509_CREDENTIALS_MSG_CODE)
+            .build();
         requestContext.getMessageContext().addMessage(resolver);
     }
 

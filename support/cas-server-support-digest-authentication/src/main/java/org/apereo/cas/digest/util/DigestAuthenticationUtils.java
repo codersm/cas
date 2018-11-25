@@ -1,11 +1,13 @@
 package org.apereo.cas.digest.util;
 
+import org.apereo.cas.util.RandomUtils;
+
+import lombok.experimental.UtilityClass;
+import lombok.val;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.impl.auth.DigestScheme;
-import org.apereo.cas.util.RandomUtils;
 
-import java.security.SecureRandom;
 import java.time.ZonedDateTime;
 
 /**
@@ -14,10 +16,8 @@ import java.time.ZonedDateTime;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-public final class DigestAuthenticationUtils {
-
-    private DigestAuthenticationUtils() {
-    }
+@UtilityClass
+public class DigestAuthenticationUtils {
 
     /**
      * Create nonce string.
@@ -25,9 +25,9 @@ public final class DigestAuthenticationUtils {
      * @return the nonce
      */
     public static String createNonce() {
-        final String fmtDate = ZonedDateTime.now().toString();
-        final SecureRandom rand = RandomUtils.getInstanceNative();
-        final Integer randomInt = rand.nextInt();
+        val fmtDate = ZonedDateTime.now().toString();
+        val rand = RandomUtils.getNativeInstance();
+        val randomInt = rand.nextInt();
         return DigestUtils.md5Hex(fmtDate + randomInt);
     }
 
@@ -60,13 +60,14 @@ public final class DigestAuthenticationUtils {
      * @return the header string
      */
     public static String createAuthenticateHeader(final String realm, final String authMethod, final String nonce) {
-        final StringBuilder stringBuilder = new StringBuilder("Digest realm=\"").append(realm).append("\",");
+        val stringBuilder = new StringBuilder("Digest realm=\"")
+            .append(realm).append("\",");
         if (StringUtils.isNotBlank(authMethod)) {
             stringBuilder.append("qop=").append(authMethod).append(',');
         }
         return stringBuilder.append("nonce=\"").append(nonce)
-                .append("\",opaque=\"").append(createOpaque(realm, nonce))
-                .append('"')
-                .toString();
+            .append("\",opaque=\"").append(createOpaque(realm, nonce))
+            .append('"')
+            .toString();
     }
 }

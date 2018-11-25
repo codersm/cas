@@ -4,6 +4,7 @@ import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.support.events.AbstractCasEvent;
 
+
 /**
  * This is {@link CasRiskyAuthenticationDetectedEvent}.
  *
@@ -26,8 +27,8 @@ public class CasRiskyAuthenticationDetectedEvent extends AbstractCasEvent {
      * @param service        the service
      * @param riskScore      the risk score
      */
-    public CasRiskyAuthenticationDetectedEvent(final Object source, final Authentication authentication, 
-                                               final RegisteredService service, 
+    public CasRiskyAuthenticationDetectedEvent(final Object source, final Authentication authentication,
+                                               final RegisteredService service,
                                                final Object riskScore) {
         super(source);
         this.authentication = authentication;

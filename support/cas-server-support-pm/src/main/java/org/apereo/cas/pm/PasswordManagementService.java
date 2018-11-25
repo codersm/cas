@@ -2,6 +2,8 @@ package org.apereo.cas.pm;
 
 import org.apereo.cas.authentication.Credential;
 
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -21,7 +23,7 @@ public interface PasswordManagementService {
      * @return true /false
      * @throws InvalidPasswordException if new password fails downstream validation
      */
-    default boolean change(Credential c, PasswordChangeBean bean) throws InvalidPasswordException {
+    default boolean change(final Credential c, final PasswordChangeBean bean) throws InvalidPasswordException {
         return false;
     }
 
@@ -31,7 +33,17 @@ public interface PasswordManagementService {
      * @param username the username
      * @return the string
      */
-    default String findEmail(String username) {
+    default String findEmail(final String username) {
+        return null;
+    }
+
+    /**
+     * Find username linked to the email.
+     *
+     * @param email the email
+     * @return the string
+     */
+    default String findUsername(final String email) {
         return null;
     }
 
@@ -41,7 +53,7 @@ public interface PasswordManagementService {
      * @param username the username
      * @return the string
      */
-    default String createToken(String username) {
+    default String createToken(final String username) {
         return null;
     }
 
@@ -51,20 +63,20 @@ public interface PasswordManagementService {
      * @param token the token
      * @return the username
      */
-    default String parseToken(String token) {
+    default String parseToken(final String token) {
         return null;
     }
 
     /**
      * Gets security questions.
-     *
+     * <p>
      * The return object must have predictable iteration (use LinkedHashMap
      * instead of HashMap, for example).
-     * 
+     *
      * @param username the username
      * @return the security questions
      */
-    default Map<String, String> getSecurityQuestions(String username) {
+    default Map<String, String> getSecurityQuestions(final String username) {
         return new LinkedHashMap<>(0);
     }
 
@@ -73,12 +85,12 @@ public interface PasswordManagementService {
      *
      * @param username the username
      * @param question the text of the question
-     * @param answer stored answer
-     * @param input user response to question
+     * @param answer   stored answer
+     * @param input    user response to question
      * @return whether the answer is correct
      */
-    default boolean isValidSecurityQuestionAnswer(String username, String question, String answer, String input) {
-        if (answer != null) {
+    default boolean isValidSecurityQuestionAnswer(final String username, final String question, final String answer, final String input) {
+        if (StringUtils.isNotBlank(answer)) {
             return answer.equals(input);
         }
         return false;

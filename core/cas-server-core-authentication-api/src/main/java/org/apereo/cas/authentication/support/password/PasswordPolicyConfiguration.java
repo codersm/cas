@@ -1,6 +1,12 @@
 package org.apereo.cas.authentication.support.password;
 
+import org.apereo.cas.authentication.AuthenticationAccountStateHandler;
 import org.apereo.cas.configuration.model.core.authentication.PasswordPolicyProperties;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 /**
  * Container for password policy configuration.
@@ -9,23 +15,26 @@ import org.apereo.cas.configuration.model.core.authentication.PasswordPolicyProp
  * @author Marvin S. Addison
  * @since 4.0.0
  */
+@Setter
+@NoArgsConstructor
+@Getter
+@AllArgsConstructor
 public class PasswordPolicyConfiguration {
 
-    private final PasswordPolicyProperties passwordPolicyProperties;
+    /**
+     * Directory-specific account state handler component.
+     */
+    private AuthenticationAccountStateHandler accountStateHandler;
 
-    public PasswordPolicyConfiguration(final PasswordPolicyProperties passwordPolicyProperties) {
-        this.passwordPolicyProperties = passwordPolicyProperties;
+    private boolean alwaysDisplayPasswordExpirationWarning;
+    private int passwordWarningNumberOfDays = 30;
+    private int loginFailures = 5;
+
+    public PasswordPolicyConfiguration(final int passwordWarningNumberOfDays) {
+        this.passwordWarningNumberOfDays = passwordWarningNumberOfDays;
     }
 
-    public boolean isAlwaysDisplayPasswordExpirationWarning() {
-        return this.passwordPolicyProperties.isWarnAll();
-    }
-    
-    public int getPasswordWarningNumberOfDays() {
-        return this.passwordPolicyProperties.getWarningDays();
-    }
-    
-    public int getLoginFailures() {
-        return this.passwordPolicyProperties.getLoginFailures();
+    public PasswordPolicyConfiguration(final PasswordPolicyProperties props) {
+        this(null, props.isWarnAll(), props.getWarningDays(), props.getLoginFailures());
     }
 }

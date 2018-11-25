@@ -27,7 +27,7 @@ public class PrincipalFromRequestRemoteUserNonInteractiveCredentialsAction exten
                                                                          final PrincipalFactory principalFactory,
                                                                          final RemoteRequestPrincipalAttributesExtractor extractor) {
         super(initialWebflowEventResolver, serviceTicketRequestWebflowEventResolver,
-                adaptiveAuthenticationPolicy, principalFactory, extractor);
+            adaptiveAuthenticationPolicy, principalFactory, extractor);
     }
 
     @Override

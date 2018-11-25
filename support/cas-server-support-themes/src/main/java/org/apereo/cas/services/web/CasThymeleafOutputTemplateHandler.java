@@ -1,5 +1,7 @@
 package org.apereo.cas.services.web;
 
+import lombok.NoArgsConstructor;
+import lombok.val;
 import org.thymeleaf.engine.AbstractTemplateHandler;
 import org.thymeleaf.model.ICloseElementTag;
 import org.thymeleaf.model.IOpenElementTag;
@@ -11,15 +13,14 @@ import org.thymeleaf.model.IText;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@NoArgsConstructor
 public class CasThymeleafOutputTemplateHandler extends AbstractTemplateHandler {
-    private boolean writeWhitespace;
 
-    public CasThymeleafOutputTemplateHandler() {
-    }
+    private boolean writeWhitespace;
 
     @Override
     public void handleText(final IText text) {
-        final String contentString = text.getText();
+        val contentString = text.getText();
         if (!contentString.isEmpty() && contentString.trim().isEmpty()) {
             if (!writeWhitespace) {
                 return;

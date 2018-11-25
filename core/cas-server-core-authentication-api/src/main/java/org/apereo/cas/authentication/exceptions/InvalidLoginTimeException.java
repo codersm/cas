@@ -1,5 +1,7 @@
 package org.apereo.cas.authentication.exceptions;
 
+import lombok.NoArgsConstructor;
+
 import javax.security.auth.login.AccountException;
 
 /**
@@ -9,16 +11,11 @@ import javax.security.auth.login.AccountException;
  * @author Marvin S. Addison
  * @since 4.0.0
  */
+@NoArgsConstructor
 public class InvalidLoginTimeException extends AccountException {
 
     private static final long serialVersionUID = -6699752791525619208L;
 
-    /**
-     * Instantiates a new invalid login time exception.
-     */
-    public InvalidLoginTimeException() {
-        super();
-    }
 
     /**
      * Instantiates a new invalid login time exception.

@@ -2,7 +2,11 @@ package org.apereo.cas.web.flow.config;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.web.flow.CasWebflowConfigurer;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlan;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlanConfigurer;
 import org.apereo.cas.web.flow.SpengoWebflowConfigurer;
+
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -22,16 +26,16 @@ import org.springframework.webflow.engine.builder.support.FlowBuilderServices;
  */
 @Configuration("spnegoWebflowConfiguration")
 @EnableConfigurationProperties(CasConfigurationProperties.class)
-public class SpnegoWebflowConfiguration {
+public class SpnegoWebflowConfiguration implements CasWebflowExecutionPlanConfigurer {
     @Autowired
     private ApplicationContext applicationContext;
 
     @Autowired
     private CasConfigurationProperties casProperties;
-    
+
     @Autowired
     @Qualifier("loginFlowRegistry")
-    private FlowDefinitionRegistry loginFlowDefinitionRegistry;
+    private ObjectProvider<FlowDefinitionRegistry> loginFlowDefinitionRegistry;
 
     @Autowired
     private FlowBuilderServices flowBuilderServices;
@@ -41,9 +45,11 @@ public class SpnegoWebflowConfiguration {
     @Bean
     @DependsOn("defaultWebflowConfigurer")
     public CasWebflowConfigurer spnegoWebflowConfigurer() {
-        final CasWebflowConfigurer w = new SpengoWebflowConfigurer(flowBuilderServices, loginFlowDefinitionRegistry, applicationContext, casProperties);
-        w.initialize();
-        return w;
+        return new SpengoWebflowConfigurer(flowBuilderServices, loginFlowDefinitionRegistry.getIfAvailable(), applicationContext, casProperties);
     }
 
+    @Override
+    public void configureWebflowExecutionPlan(final CasWebflowExecutionPlan plan) {
+        plan.registerWebflowConfigurer(spnegoWebflowConfigurer());
+    }
 }

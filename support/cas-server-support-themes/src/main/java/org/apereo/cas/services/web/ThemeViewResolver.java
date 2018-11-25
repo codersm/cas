@@ -1,6 +1,12 @@
 package org.apereo.cas.services.web;
 
-import org.springframework.beans.BeansException;
+import org.apereo.cas.configuration.CasConfigurationProperties;
+
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.boot.autoconfigure.template.TemplateLocation;
 import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafProperties;
 import org.springframework.context.ApplicationContext;
@@ -8,9 +14,8 @@ import org.springframework.context.ApplicationContextAware;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.ViewResolver;
 import org.springframework.web.servlet.view.AbstractCachingViewResolver;
-import org.thymeleaf.spring4.view.AbstractThymeleafView;
+import org.thymeleaf.spring5.view.AbstractThymeleafView;
 
-import javax.annotation.Nonnull;
 import java.util.Locale;
 
 /**
@@ -20,71 +25,67 @@ import java.util.Locale;
  * @author Daniel Frett
  * @since 5.2.0
  */
+@Slf4j
+@Setter
+@RequiredArgsConstructor
 public class ThemeViewResolver extends AbstractCachingViewResolver {
-    @Nonnull
+
     private final ViewResolver delegate;
 
-    @Nonnull
     private final ThymeleafProperties thymeleafProperties;
 
-    @Nonnull
-    private final String theme;
+    private final CasConfigurationProperties casProperties;
 
-    public ThemeViewResolver(@Nonnull final ViewResolver baseResolver,
-                             @Nonnull final ThymeleafProperties thymeleafProperties, @Nonnull final String theme) {
-        this.delegate = baseResolver;
-        this.thymeleafProperties = thymeleafProperties;
-        this.theme = theme;
-    }
+    private final String theme;
 
     @Override
     protected View loadView(final String viewName, final Locale locale) throws Exception {
-        final View view = delegate.resolveViewName(viewName, locale);
-
-        // support fallback for ThymeleafViews
+        val view = delegate.resolveViewName(viewName, locale);
         if (view instanceof AbstractThymeleafView) {
-            final AbstractThymeleafView thymeleafView = (AbstractThymeleafView) view;
-            final String baseTemplateName = thymeleafView.getTemplateName();
-
-            // check for a template for this theme
-            final String templateName = theme + "/" + baseTemplateName;
-            final TemplateLocation location = new TemplateLocation(thymeleafProperties.getPrefix().concat(templateName)
-                    .concat(thymeleafProperties.getSuffix()));
-            if (location.exists(getApplicationContext())) {
-                thymeleafView.setTemplateName(templateName);
-            }
+            val thymeleafView = (AbstractThymeleafView) view;
+            configureTemplateThemeDefaultLocation(thymeleafView);
         }
-
         return view;
+    }
+
+    private void configureTemplateThemeDefaultLocation(final AbstractThymeleafView thymeleafView) {
+        val baseTemplateName = thymeleafView.getTemplateName();
+        val templateName = theme + '/' + baseTemplateName;
+        val path = thymeleafProperties.getPrefix().concat(templateName).concat(thymeleafProperties.getSuffix());
+        LOGGER.trace("Attempting to locate theme location at [{}]", path);
+        val location = new TemplateLocation(path);
+        if (location.exists(getApplicationContext())) {
+            thymeleafView.setTemplateName(templateName);
+        }
     }
 
     /**
      * {@link ThemeViewResolverFactory} that will create a ThemeViewResolver for the specified theme.
      */
+    @Getter
+    @Setter
     public static class Factory implements ThemeViewResolverFactory, ApplicationContextAware {
-        @Nonnull
+
         private final ViewResolver delegate;
-        @Nonnull
+
         private final ThymeleafProperties thymeleafProperties;
+
+        private final CasConfigurationProperties casProperties;
 
         private ApplicationContext applicationContext;
 
-        public Factory(@Nonnull final ViewResolver delegate, @Nonnull final ThymeleafProperties thymeleafProperties) {
+        public Factory(final ViewResolver delegate, final ThymeleafProperties thymeleafProperties, final CasConfigurationProperties casProperties) {
             this.delegate = delegate;
+            this.casProperties = casProperties;
             this.thymeleafProperties = thymeleafProperties;
         }
 
         @Override
-        public ThemeViewResolver create(@Nonnull final String theme) {
-            final ThemeViewResolver resolver = new ThemeViewResolver(delegate, thymeleafProperties, theme);
+        public ThemeViewResolver create(final String theme) {
+            val resolver = new ThemeViewResolver(delegate, thymeleafProperties, casProperties, theme);
             resolver.setApplicationContext(applicationContext);
             resolver.setCache(thymeleafProperties.isCache());
             return resolver;
-        }
-
-        @Override
-        public void setApplicationContext(final ApplicationContext applicationContext) throws BeansException {
-            this.applicationContext = applicationContext;
         }
     }
 }

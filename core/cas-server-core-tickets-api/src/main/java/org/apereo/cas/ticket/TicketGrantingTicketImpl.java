@@ -1,14 +1,18 @@
 package org.apereo.cas.ticket;
 
+import org.apereo.cas.authentication.Authentication;
+import org.apereo.cas.authentication.principal.Service;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
+import lombok.val;
 import org.apache.commons.lang3.StringUtils;
-import org.apereo.cas.authentication.Authentication;
-import org.apereo.cas.authentication.principal.Service;
-import org.springframework.util.Assert;
 
 import javax.persistence.Column;
 import javax.persistence.DiscriminatorColumn;
@@ -18,11 +22,9 @@ import javax.persistence.Lob;
 import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Concrete implementation of a TicketGrantingTicket. A TicketGrantingTicket is
@@ -39,7 +41,9 @@ import java.util.Map;
 @DiscriminatorColumn(name = "TYPE")
 @DiscriminatorValue(TicketGrantingTicket.PREFIX)
 @JsonIgnoreProperties(ignoreUnknown = true)
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@Getter
+@NoArgsConstructor
 public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGrantingTicket {
 
     /**
@@ -55,16 +59,10 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
     private Authentication authentication;
 
     /**
-     * Flag to enforce manual expiration.
-     */
-    @Column(name = "EXPIRED", nullable = false)
-    private Boolean expired = Boolean.FALSE;
-
-    /**
      * Service that produced a proxy-granting ticket.
      */
     @Lob
-    @Column(name = "PROXIED_BY", nullable = true, length = Integer.MAX_VALUE)
+    @Column(name = "PROXIED_BY", length = Integer.MAX_VALUE)
     private Service proxiedBy;
 
     /**
@@ -95,12 +93,6 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
     private HashSet<String> descendantTickets = new HashSet<>();
 
     /**
-     * Instantiates a new ticket granting ticket impl.
-     */
-    public TicketGrantingTicketImpl() {
-    }
-
-    /**
      * Constructs a new TicketGrantingTicket.
      * May throw an {@link IllegalArgumentException} if the Authentication object is null.
      *
@@ -111,18 +103,13 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
      * @param policy                     the expiration policy for this ticket.
      */
     @JsonCreator
-    public TicketGrantingTicketImpl(@JsonProperty("id") final String id,
-                                    @JsonProperty("proxiedBy") final Service proxiedBy,
-                                    @JsonProperty("grantingTicket") final TicketGrantingTicket parentTicketGrantingTicket,
-                                    @JsonProperty("authentication") final Authentication authentication,
-                                    @JsonProperty("expirationPolicy") final ExpirationPolicy policy) {
-
+    public TicketGrantingTicketImpl(@JsonProperty("id") final String id, @JsonProperty("proxiedBy") final Service proxiedBy,
+                                    @JsonProperty("ticketGrantingTicket") final TicketGrantingTicket parentTicketGrantingTicket,
+                                    @JsonProperty("authentication") final @NonNull Authentication authentication, @JsonProperty("expirationPolicy") final ExpirationPolicy policy) {
         super(id, policy);
-
         if (parentTicketGrantingTicket != null && proxiedBy == null) {
-            throw new IllegalArgumentException("Must specify proxiedBy when providing parent TGT");
+            throw new IllegalArgumentException("Must specify proxiedBy when providing parent ticket-granting ticket");
         }
-        Assert.notNull(authentication, "authentication cannot be null");
         this.ticketGrantingTicket = parentTicketGrantingTicket;
         this.authentication = authentication;
         this.proxiedBy = proxiedBy;
@@ -140,14 +127,18 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
         this(id, null, null, authentication, policy);
     }
 
-    @Override
-    public TicketGrantingTicket getGrantingTicket() {
-        return this.ticketGrantingTicket;
-    }
-
-    @Override
-    public Authentication getAuthentication() {
-        return this.authentication;
+    /**
+     * Normalize the path of a service by removing the query string and everything after a semi-colon.
+     *
+     * @param service the service to normalize
+     * @return the normalized path
+     */
+    private static String normalizePath(final Service service) {
+        var path = service.getId();
+        path = StringUtils.substringBefore(path, "?");
+        path = StringUtils.substringBefore(path, ";");
+        path = StringUtils.substringBefore(path, "#");
+        return path;
     }
 
     /**
@@ -160,11 +151,7 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
     @Override
     public synchronized ServiceTicket grantServiceTicket(final String id, final Service service, final ExpirationPolicy expirationPolicy,
                                                          final boolean credentialProvided, final boolean onlyTrackMostRecentSession) {
-
-        final ServiceTicket serviceTicket = new ServiceTicketImpl(id, this,
-                service, credentialProvided,
-                expirationPolicy);
-
+        val serviceTicket = new ServiceTicketImpl(id, this, service, credentialProvided, expirationPolicy);
         trackServiceSession(serviceTicket.getId(), service, onlyTrackMostRecentSession);
         return serviceTicket;
     }
@@ -178,46 +165,13 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
      */
     protected void trackServiceSession(final String id, final Service service, final boolean onlyTrackMostRecentSession) {
         update();
-
         service.setPrincipal(getRoot().getAuthentication().getPrincipal().getId());
         if (onlyTrackMostRecentSession) {
-            final String path = normalizePath(service);
-            final Collection<Service> existingServices = this.services.values();
-            // loop on existing services
-            existingServices.stream()
-                    .filter(existingService -> path.equals(normalizePath(existingService)))
-                    .findFirst().ifPresent(existingServices::remove);
+            val path = normalizePath(service);
+            val existingServices = this.services.values();
+            existingServices.stream().filter(existingService -> path.equals(normalizePath(existingService))).findFirst().ifPresent(existingServices::remove);
         }
         this.services.put(id, service);
-    }
-
-    /**
-     * Normalize the path of a service by removing the query string and everything after a semi-colon.
-     *
-     * @param service the service to normalize
-     * @return the normalized path
-     */
-    private static String normalizePath(final Service service) {
-        String path = service.getId();
-        path = StringUtils.substringBefore(path, "?");
-        path = StringUtils.substringBefore(path, ";");
-        path = StringUtils.substringBefore(path, "#");
-        return path;
-    }
-
-    /**
-     * Gets an new map with the service ticket and services accessed by this ticket-granting ticket.
-     *
-     * @return a map of service ticket and services accessed by this ticket-granting ticket.
-     */
-    @Override
-    public synchronized Map<String, Service> getServices() {
-        return new HashMap<>(this.services);
-    }
-    
-    @Override
-    public Map<String, Service> getProxyGrantingTickets() {
-        return this.proxyGrantingTickets;
     }
 
     /**
@@ -235,53 +189,29 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
      */
     @Override
     public boolean isRoot() {
-        return this.getGrantingTicket() == null;
-    }
-
-    @Override
-    public void markTicketExpired() {
-        this.expired = Boolean.TRUE;
+        return this.getTicketGrantingTicket() == null;
     }
 
     @JsonIgnore
     @Override
     public TicketGrantingTicket getRoot() {
-        final TicketGrantingTicket parent = getGrantingTicket();
+        val parent = this.getTicketGrantingTicket();
         if (parent == null) {
             return this;
         }
         return parent.getRoot();
     }
 
-    /**
-     * Return if the TGT is expired.
-     *
-     * @return if the TGT is expired.
-     */
-    @Override
-    @JsonIgnore
-    public boolean isExpiredInternal() {
-        return this.expired;
-    }
-
     @JsonIgnore
     @Override
     public List<Authentication> getChainedAuthentications() {
-        final List<Authentication> list = new ArrayList<>();
-
+        val list = new ArrayList<Authentication>();
         list.add(getAuthentication());
-
-        if (getGrantingTicket() == null) {
+        if (this.getTicketGrantingTicket() == null) {
             return new ArrayList<>(list);
         }
-
-        list.addAll(getGrantingTicket().getChainedAuthentications());
+        list.addAll(this.getTicketGrantingTicket().getChainedAuthentications());
         return new ArrayList<>(list);
-    }
-
-    @Override
-    public Service getProxiedBy() {
-        return this.proxiedBy;
     }
 
     @Override
@@ -289,8 +219,4 @@ public class TicketGrantingTicketImpl extends AbstractTicket implements TicketGr
         return TicketGrantingTicket.PREFIX;
     }
 
-    @Override
-    public Collection getDescendantTickets() {
-        return descendantTickets;
-    }
 }

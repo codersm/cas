@@ -3,7 +3,8 @@ package org.apereo.cas.config;
 import org.apereo.cas.cassandra.CassandraSessionFactory;
 import org.apereo.cas.cassandra.DefaultCassandraSessionFactory;
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.apereo.cas.configuration.model.support.cassandra.authentication.CassandraAuthenticationProperties;
+
+import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.context.config.annotation.RefreshScope;
@@ -26,7 +27,7 @@ public class CassandraCoreConfiguration {
     @Bean
     @RefreshScope
     public CassandraSessionFactory cassandraSessionFactory() {
-        final CassandraAuthenticationProperties cassandra = casProperties.getAuthn().getCassandra();
+        val cassandra = casProperties.getAuthn().getCassandra();
         return new DefaultCassandraSessionFactory(cassandra);
     }
 

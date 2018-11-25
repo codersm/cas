@@ -1,10 +1,12 @@
 package org.apereo.cas;
 
 import org.apereo.cas.util.spring.boot.AbstractCasBanner;
+
 import org.eclipse.jetty.server.Server;
 import org.springframework.core.env.Environment;
 
 import java.util.Formatter;
+
 /**
  * This is {@link CasJettyBanner}.
  *

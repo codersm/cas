@@ -1,7 +1,10 @@
 package org.apereo.cas.audit.spi;
 
+import org.apereo.cas.audit.spi.principal.DefaultAuditPrincipalIdProvider;
+import org.apereo.cas.audit.spi.principal.ThreadLocalPrincipalResolver;
+import org.apereo.cas.authentication.AuthenticationCredentialsThreadLocalBinder;
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
-import org.apereo.cas.authentication.AuthenticationCredentialsLocalBinder;
+
 import org.apereo.inspektr.common.spi.PrincipalResolver;
 import org.junit.After;
 import org.junit.Test;
@@ -17,36 +20,36 @@ import static org.junit.Assert.*;
 public class ThreadLocalPrincipalResolverTests {
 
     private final ThreadLocalPrincipalResolver theResolver =
-            new ThreadLocalPrincipalResolver(new AuditPrincipalIdProvider() {});
+        new ThreadLocalPrincipalResolver(new DefaultAuditPrincipalIdProvider());
 
     @After
     public void cleanup() {
-        AuthenticationCredentialsLocalBinder.clear();
+        AuthenticationCredentialsThreadLocalBinder.clear();
     }
 
     @Test
-    public void noAuthenticationOrCrendentialsAvailableInThreadLocal() {
+    public void noAuthenticationOrCredentialsAvailableInThreadLocal() {
         assertResolvedPrincipal(PrincipalResolver.UNKNOWN_USER);
     }
 
     @Test
     public void singleThreadSetsSingleCredential() {
-        AuthenticationCredentialsLocalBinder.bindCurrent(CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword());
+        AuthenticationCredentialsThreadLocalBinder.bindCurrent(CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword());
         assertResolvedPrincipal(CoreAuthenticationTestUtils.CONST_USERNAME);
     }
 
     @Test
     public void singleThreadSetsMultipleCredentials() {
-        AuthenticationCredentialsLocalBinder.bindCurrent(
-                CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword(),
-                CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword("test2"));
+        AuthenticationCredentialsThreadLocalBinder.bindCurrent(
+            CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword(),
+            CoreAuthenticationTestUtils.getCredentialsWithSameUsernameAndPassword("test2"));
 
         assertResolvedPrincipal(String.format("%s, %s", CoreAuthenticationTestUtils.CONST_USERNAME, "test2"));
     }
 
     @Test
     public void singleThreadSetsAuthentication() {
-        AuthenticationCredentialsLocalBinder.bindCurrent(CoreAuthenticationTestUtils.getAuthentication());
+        AuthenticationCredentialsThreadLocalBinder.bindCurrent(CoreAuthenticationTestUtils.getAuthentication());
         assertResolvedPrincipal(CoreAuthenticationTestUtils.CONST_USERNAME);
     }
 

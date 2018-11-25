@@ -1,13 +1,12 @@
 package org.apereo.cas.authorization;
 
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.ldaptive.ConnectionFactory;
-import org.ldaptive.LdapAttribute;
 import org.ldaptive.LdapEntry;
 import org.ldaptive.SearchExecutor;
 import org.pac4j.core.authorization.generator.AuthorizationGenerator;
 import org.pac4j.core.profile.CommonProfile;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Provides a simple {@link AuthorizationGenerator} implementation that obtains user roles from an LDAP search.
@@ -22,9 +21,8 @@ import org.slf4j.LoggerFactory;
  * @author Misagh Moayyed
  * @since 4.0.0
  */
+@Slf4j
 public class LdapUserAttributesToRolesAuthorizationGenerator extends BaseUseAttributesAuthorizationGenerator {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(LdapUserAttributesToRolesAuthorizationGenerator.class);
 
     private final String roleAttribute;
     private final String rolePrefix;
@@ -53,7 +51,7 @@ public class LdapUserAttributesToRolesAuthorizationGenerator extends BaseUseAttr
     @Override
     protected CommonProfile generateAuthorizationForLdapEntry(final CommonProfile profile, final LdapEntry userEntry) {
         if (!userEntry.getAttributes().isEmpty()) {
-            final LdapAttribute attribute = userEntry.getAttribute(this.roleAttribute);
+            val attribute = userEntry.getAttribute(this.roleAttribute);
             if (attribute != null) {
                 addProfileRoles(userEntry, profile, attribute, this.rolePrefix);
             } else {

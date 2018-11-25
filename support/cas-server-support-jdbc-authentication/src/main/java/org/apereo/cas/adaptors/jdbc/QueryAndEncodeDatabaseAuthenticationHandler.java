@@ -1,18 +1,19 @@
 package org.apereo.cas.adaptors.jdbc;
 
-import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.apache.shiro.crypto.hash.ConfigurableHashService;
-import org.apache.shiro.crypto.hash.DefaultHashService;
-import org.apache.shiro.crypto.hash.HashRequest;
-import org.apache.shiro.util.ByteSource;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.PreventedException;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.exceptions.AccountDisabledException;
 import org.apereo.cas.authentication.exceptions.AccountPasswordMustChangeException;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
+
+import lombok.val;
+import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.shiro.crypto.hash.DefaultHashService;
+import org.apache.shiro.crypto.hash.HashRequest;
+import org.apache.shiro.util.ByteSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.IncorrectResultSizeDataAccessException;
 
@@ -20,6 +21,7 @@ import javax.security.auth.login.AccountNotFoundException;
 import javax.security.auth.login.FailedLoginException;
 import javax.sql.DataSource;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Map;
 
 /**
@@ -80,7 +82,7 @@ public class QueryAndEncodeDatabaseAuthenticationHandler extends AbstractJdbcUse
     /**
      * The number of iterations. Defaults to 0.
      */
-    protected long numberOfIterations;
+    protected int numberOfIterations;
 
     /**
      * Static/private salt to be combined with the dynamic salt retrieved
@@ -102,7 +104,7 @@ public class QueryAndEncodeDatabaseAuthenticationHandler extends AbstractJdbcUse
                                                        final Integer order, final DataSource dataSource,
                                                        final String algorithmName, final String sql, final String passwordFieldName,
                                                        final String saltFieldName, final String expiredFieldName, final String disabledFieldName,
-                                                       final String numberOfIterationsFieldName, final long numberOfIterations,
+                                                       final String numberOfIterationsFieldName, final int numberOfIterations,
                                                        final String staticSalt) {
         super(name, servicesManager, principalFactory, order, dataSource);
         this.algorithmName = algorithmName;
@@ -117,40 +119,40 @@ public class QueryAndEncodeDatabaseAuthenticationHandler extends AbstractJdbcUse
     }
 
     @Override
-    protected HandlerResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential transformedCredential,
-                                                                 final String originalPassword)
-            throws GeneralSecurityException, PreventedException {
+    protected AuthenticationHandlerExecutionResult authenticateUsernamePasswordInternal(final UsernamePasswordCredential transformedCredential,
+                                                                                        final String originalPassword)
+        throws GeneralSecurityException, PreventedException {
 
         if (StringUtils.isBlank(this.sql) || StringUtils.isBlank(this.algorithmName) || getJdbcTemplate() == null) {
             throw new GeneralSecurityException("Authentication handler is not configured correctly");
         }
 
-        final String username = transformedCredential.getUsername();
+        val username = transformedCredential.getUsername();
         try {
-            final Map<String, Object> values = getJdbcTemplate().queryForMap(this.sql, username);
-            final String digestedPassword = digestEncodedPassword(transformedCredential.getPassword(), values);
+            val values = getJdbcTemplate().queryForMap(this.sql, username);
+            val digestedPassword = digestEncodedPassword(transformedCredential.getPassword(), values);
 
             if (!values.get(this.passwordFieldName).equals(digestedPassword)) {
                 throw new FailedLoginException("Password does not match value on record.");
             }
-            if (StringUtils.isNotBlank(this.expiredFieldName)){
-                final Object dbExpired = values.get(this.expiredFieldName);
-                if (dbExpired != null && (Boolean.TRUE.equals(BooleanUtils.toBoolean(dbExpired.toString())) || dbExpired.equals(Integer.valueOf(1)))){
+            if (StringUtils.isNotBlank(this.expiredFieldName) && values.containsKey(this.expiredFieldName)) {
+                val dbExpired = values.get(this.expiredFieldName).toString();
+                if (BooleanUtils.toBoolean(dbExpired) || "1".equals(dbExpired)) {
                     throw new AccountPasswordMustChangeException("Password has expired");
                 }
             }
-            if (StringUtils.isNotBlank(this.disabledFieldName)){
-                final Object dbDisabled = values.get(this.disabledFieldName);
-                if (dbDisabled != null && (Boolean.TRUE.equals(BooleanUtils.toBoolean(dbDisabled.toString())) || dbDisabled.equals(1))){
+            if (StringUtils.isNotBlank(this.disabledFieldName) && values.containsKey(this.disabledFieldName)) {
+                val dbDisabled = values.get(this.disabledFieldName).toString();
+                if (BooleanUtils.toBoolean(dbDisabled) || "1".equals(dbDisabled)) {
                     throw new AccountDisabledException("Account has been disabled");
                 }
             }
-            return createHandlerResult(transformedCredential, this.principalFactory.createPrincipal(username), null);
+            return createHandlerResult(transformedCredential, this.principalFactory.createPrincipal(username), new ArrayList<>(0));
 
         } catch (final IncorrectResultSizeDataAccessException e) {
             if (e.getActualSize() == 0) {
                 throw new AccountNotFoundException(username + " not found with SQL query");
-            } 
+            }
             throw new FailedLoginException("Multiple records found for " + username);
         } catch (final DataAccessException e) {
             throw new PreventedException("SQL exception while executing query for " + username, e);
@@ -165,29 +167,28 @@ public class QueryAndEncodeDatabaseAuthenticationHandler extends AbstractJdbcUse
      * @return the digested password
      */
     protected String digestEncodedPassword(final String encodedPassword, final Map<String, Object> values) {
-        final ConfigurableHashService hashService = new DefaultHashService();
-
+        val hashService = new DefaultHashService();
         if (StringUtils.isNotBlank(this.staticSalt)) {
             hashService.setPrivateSalt(ByteSource.Util.bytes(this.staticSalt));
         }
         hashService.setHashAlgorithmName(this.algorithmName);
 
-        Long numOfIterations = this.numberOfIterations;
         if (values.containsKey(this.numberOfIterationsFieldName)) {
-            final String longAsStr = values.get(this.numberOfIterationsFieldName).toString();
-            numOfIterations = Long.valueOf(longAsStr);
+            val longAsStr = values.get(this.numberOfIterationsFieldName).toString();
+            hashService.setHashIterations(Integer.parseInt(longAsStr));
+        } else {
+            hashService.setHashIterations(this.numberOfIterations);
         }
 
-        hashService.setHashIterations(numOfIterations.intValue());
         if (!values.containsKey(this.saltFieldName)) {
             throw new IllegalArgumentException("Specified field name for salt does not exist in the results");
         }
 
-        final String dynaSalt = values.get(this.saltFieldName).toString();
-        final HashRequest request = new HashRequest.Builder()
-                .setSalt(dynaSalt)
-                .setSource(encodedPassword)
-                .build();
+        val dynaSalt = values.get(this.saltFieldName).toString();
+        val request = new HashRequest.Builder()
+            .setSalt(dynaSalt)
+            .setSource(encodedPassword)
+            .build();
         return hashService.computeHash(request).toHex();
     }
 }

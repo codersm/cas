@@ -2,39 +2,47 @@ package org.apereo.cas.web.flow.actions;
 
 import org.apereo.cas.web.flow.CasWebflowConstants;
 import org.apereo.cas.web.support.WebUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.webflow.action.AbstractAction;
 import org.springframework.webflow.engine.Flow;
-import org.springframework.webflow.engine.FlowVariable;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
 
 /**
- * This is {@link ClearWebflowCredentialAction} invoked ONLY as an exit-action for non-interactive authn flows. 
- *
+ * This action {@link ClearWebflowCredentialAction} is invoked ONLY as an exit-action for non-interactive authn flows.
+ * Don't clear credentials when {@value CasWebflowConstants#TRANSITION_ID_SUCCESS} occurs which leads the webflow to
+ * {@value CasWebflowConstants#STATE_ID_CREATE_TICKET_GRANTING_TICKET} but may be overridden by the AUP flow
+ * which needs credentials in some cases.
+ * Credentials need to be cleared if webflow is returning to login page where credentials without
+ * a username property will not bind correctly to the login form in the thymeleaf template.
  * @author Misagh Moayyed
  * @since 5.0.0
  */
+
+@Slf4j
 public class ClearWebflowCredentialAction extends AbstractAction {
-    private static final Logger LOGGER = LoggerFactory.getLogger(ClearWebflowCredentialAction.class);
 
     @Override
+    @SneakyThrows
     protected Event doExecute(final RequestContext requestContext) {
+        val current = requestContext.getCurrentEvent().getId();
+        if (current.equalsIgnoreCase(CasWebflowConstants.TRANSITION_ID_SUCCESS)) {
+            return null;
+        }
+
         WebUtils.putCredential(requestContext, null);
-        
-        final String current = requestContext.getCurrentEvent().getId();
+
         if (current.equalsIgnoreCase(CasWebflowConstants.TRANSITION_ID_AUTHENTICATION_FAILURE)
-                || current.equalsIgnoreCase(CasWebflowConstants.TRANSITION_ID_ERROR)) {
+            || current.equalsIgnoreCase(CasWebflowConstants.TRANSITION_ID_ERROR)) {
             LOGGER.debug("Current event signaled a failure. Recreating credentials instance from the context");
-            try {
-                final Flow flow = (Flow) requestContext.getFlowExecutionContext().getDefinition();
-                final FlowVariable var = flow.getVariable(CasWebflowConstants.VAR_ID_CREDENTIAL);
-                var.create(requestContext);
-            } catch (final Exception e) {
-                throw new RuntimeException(e.getMessage(), e);
-            }
-        } 
+
+            val flow = (Flow) requestContext.getFlowExecutionContext().getDefinition();
+            val var = flow.getVariable(CasWebflowConstants.VAR_ID_CREDENTIAL);
+            var.create(requestContext);
+        }
         return null;
     }
 }

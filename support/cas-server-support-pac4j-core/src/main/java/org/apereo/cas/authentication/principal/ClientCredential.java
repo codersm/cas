@@ -1,11 +1,17 @@
 package org.apereo.cas.authentication.principal;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.apache.commons.lang3.builder.ToStringStyle;
 import org.apereo.cas.authentication.Credential;
+
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+import org.pac4j.core.credentials.Credentials;
 import org.pac4j.core.profile.UserProfile;
 
-import java.io.Serializable;
+import java.util.UUID;
 
 /**
  * This class represents client credentials and (after authentication) a user profile.
@@ -13,65 +19,41 @@ import java.io.Serializable;
  * @author Jerome Leleu
  * @since 3.5.0
  */
-public class ClientCredential implements Credential, Serializable {
+@ToString
+@Setter
+@Getter
+@NoArgsConstructor(force = true)
+@RequiredArgsConstructor
+@AllArgsConstructor
+public class ClientCredential implements Credential {
+
+    /**
+     * The prefix used when building an identifier for an unauthenticated user.
+     */
+    public static final String NOT_YET_AUTHENTICATED = "NotYetAuthenticated-";
 
     /***
      * The name of the client used to perform the authentication.
      */
     public static final String AUTHENTICATION_ATTRIBUTE_CLIENT_NAME = "clientName";
 
-    /**
-     * The serialVersionUID.
-     */
     private static final long serialVersionUID = -7883301304291894763L;
-
-    private boolean typedIdUsed = true;
-
-    /**
-     * The user profile after authentication.
-     */
-    private UserProfile userProfile;
 
     /**
      * The internal credentials provided by the authentication at the provider.
      */
-    private org.pac4j.core.credentials.Credentials credentials;
+    private final transient Credentials credentials;
 
     /**
-     * Define the credentials.
-     *
-     * @param theCredentials The authentication credentials
+     * Name of the client that established the credential.
      */
-    public ClientCredential(final org.pac4j.core.credentials.Credentials theCredentials) {
-        this.credentials = theCredentials;
-    }
+    private final String clientName;
 
+    private boolean typedIdUsed = true;
     /**
-     * Return the credentials.
-     *
-     * @return the credentials
+     * The user profile after authentication.
      */
-    public org.pac4j.core.credentials.Credentials getCredentials() {
-        return this.credentials;
-    }
-
-    /**
-     * Return the profile of the authenticated user.
-     *
-     * @return the profile of the authenticated user
-     */
-    public UserProfile getUserProfile() {
-        return this.userProfile;
-    }
-
-    /**
-     * Define the user profile.
-     *
-     * @param theUserProfile The user profile
-     */
-    public void setUserProfile(final UserProfile theUserProfile) {
-        this.userProfile = theUserProfile;
-    }
+    private UserProfile userProfile;
 
     @Override
     public String getId() {
@@ -81,17 +63,6 @@ public class ClientCredential implements Credential, Serializable {
             }
             return this.userProfile.getId();
         }
-        return null;
-    }
-
-    public void setTypedIdUsed(final boolean typedIdUsed) {
-        this.typedIdUsed = typedIdUsed;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this, ToStringStyle.NO_CLASS_NAME_STYLE)
-                .append("id", getId())
-                .toString();
+        return NOT_YET_AUTHENTICATED + UUID.randomUUID().toString();
     }
 }

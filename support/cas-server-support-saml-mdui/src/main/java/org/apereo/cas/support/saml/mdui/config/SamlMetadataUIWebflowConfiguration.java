@@ -1,6 +1,5 @@
 package org.apereo.cas.support.saml.mdui.config;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.authentication.principal.ServiceFactory;
 import org.apereo.cas.authentication.principal.WebApplicationService;
 import org.apereo.cas.configuration.CasConfigurationProperties;
@@ -10,6 +9,12 @@ import org.apereo.cas.support.saml.mdui.MetadataResolverAdapter;
 import org.apereo.cas.support.saml.mdui.web.flow.SamlMetadataUIParserAction;
 import org.apereo.cas.support.saml.mdui.web.flow.SamlMetadataUIWebflowConfigurer;
 import org.apereo.cas.web.flow.CasWebflowConfigurer;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlan;
+import org.apereo.cas.web.flow.CasWebflowExecutionPlanConfigurer;
+
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -31,21 +36,21 @@ import org.springframework.webflow.execution.Action;
  */
 @Configuration("samlMetadataUIWebflowConfiguration")
 @EnableConfigurationProperties(CasConfigurationProperties.class)
-public class SamlMetadataUIWebflowConfiguration {
+public class SamlMetadataUIWebflowConfiguration implements CasWebflowExecutionPlanConfigurer {
 
     @Autowired
     private CasConfigurationProperties casProperties;
 
-    @Autowired(required = false)
+    @Autowired
     @Qualifier("loginFlowRegistry")
-    private FlowDefinitionRegistry loginFlowDefinitionRegistry;
+    private ObjectProvider<FlowDefinitionRegistry> loginFlowDefinitionRegistry;
 
-    @Autowired(required = false)
-    private FlowBuilderServices flowBuilderServices;
+    @Autowired
+    private ObjectProvider<FlowBuilderServices> flowBuilderServices;
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
     @Autowired
     @Qualifier("webApplicationServiceFactory")
@@ -56,23 +61,27 @@ public class SamlMetadataUIWebflowConfiguration {
 
     @Autowired
     @Qualifier("chainingSamlMetadataUIMetadataResolverAdapter")
-    private MetadataResolverAdapter chainingSamlMetadataUIMetadataResolverAdapter;
+    private ObjectProvider<MetadataResolverAdapter> chainingSamlMetadataUIMetadataResolverAdapter;
 
     @ConditionalOnMissingBean(name = "samlMetadataUIWebConfigurer")
     @ConditionalOnBean(name = "defaultWebflowConfigurer")
     @Bean
     @DependsOn("defaultWebflowConfigurer")
     public CasWebflowConfigurer samlMetadataUIWebConfigurer() {
-        final CasWebflowConfigurer w = new SamlMetadataUIWebflowConfigurer(flowBuilderServices,
-                loginFlowDefinitionRegistry, samlMetadataUIParserAction(), applicationContext, casProperties);
-        w.initialize();
-        return w;
+        return new SamlMetadataUIWebflowConfigurer(flowBuilderServices.getIfAvailable(),
+            loginFlowDefinitionRegistry.getIfAvailable(), samlMetadataUIParserAction(),
+            applicationContext, casProperties);
     }
 
     @ConditionalOnMissingBean(name = "samlMetadataUIParserAction")
     @Bean
     public Action samlMetadataUIParserAction() {
-        final String parameter = StringUtils.defaultIfEmpty(casProperties.getSamlMetadataUi().getParameter(), SamlProtocolConstants.PARAMETER_ENTITY_ID);
-        return new SamlMetadataUIParserAction(parameter, chainingSamlMetadataUIMetadataResolverAdapter, serviceFactory, servicesManager);
+        val parameter = StringUtils.defaultIfEmpty(casProperties.getSamlMetadataUi().getParameter(), SamlProtocolConstants.PARAMETER_ENTITY_ID);
+        return new SamlMetadataUIParserAction(parameter, chainingSamlMetadataUIMetadataResolverAdapter.getIfAvailable(), serviceFactory, servicesManager.getIfAvailable());
+    }
+
+    @Override
+    public void configureWebflowExecutionPlan(final CasWebflowExecutionPlan plan) {
+        plan.registerWebflowConfigurer(samlMetadataUIWebConfigurer());
     }
 }

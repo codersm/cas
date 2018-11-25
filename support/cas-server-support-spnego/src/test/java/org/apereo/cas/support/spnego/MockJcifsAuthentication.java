@@ -1,19 +1,18 @@
 package org.apereo.cas.support.spnego;
 
-import java.security.Principal;
-
 import jcifs.spnego.Authentication;
 
+import java.security.Principal;
+
 /**
- *
  * @author Marc-Antoine Garrigue
  * @author Arnaud Lesueur
  * @since 4.2.0
  */
 public class MockJcifsAuthentication extends Authentication {
 
-    private Principal principal;
-    private byte[] outToken = new byte[] {4, 5, 6};
+    private final Principal principal;
+    private final byte[] outToken = new byte[]{4, 5, 6};
 
     public MockJcifsAuthentication() {
         this.principal = new MockPrincipal("test");

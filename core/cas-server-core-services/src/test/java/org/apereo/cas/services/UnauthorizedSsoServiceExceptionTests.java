@@ -1,8 +1,9 @@
 package org.apereo.cas.services;
 
-import static org.junit.Assert.*;
-
+import lombok.val;
 import org.junit.Test;
+
+import static org.junit.Assert.*;
 
 /**
  * @author Misagh Moayyed
@@ -15,21 +16,21 @@ public class UnauthorizedSsoServiceExceptionTests {
 
     @Test
     public void verifyGetCode() {
-        final UnauthorizedSsoServiceException e = new UnauthorizedSsoServiceException();
+        val e = new UnauthorizedSsoServiceException();
         assertEquals(CODE, e.getMessage());
     }
 
     @Test
     public void verifyCodeConstructor() {
-        final UnauthorizedSsoServiceException e = new UnauthorizedSsoServiceException(MESSAGE);
+        val e = new UnauthorizedSsoServiceException(MESSAGE);
 
         assertEquals(MESSAGE, e.getMessage());
     }
 
     @Test
     public void verifyThrowableConstructorWithCode() {
-        final RuntimeException r = new RuntimeException();
-        final UnauthorizedSsoServiceException e = new UnauthorizedSsoServiceException(MESSAGE, r);
+        val r = new RuntimeException();
+        val e = new UnauthorizedSsoServiceException(MESSAGE, r);
 
         assertEquals(MESSAGE, e.getMessage());
         assertEquals(r, e.getCause());

@@ -2,14 +2,16 @@ package org.apereo.cas.web.view;
 
 import org.apereo.cas.CasProtocolConstants;
 import org.apereo.cas.CasViewConstants;
-import org.apereo.cas.authentication.DefaultAuthenticationContextValidator;
+import org.apereo.cas.authentication.DefaultAuthenticationAttributeReleasePolicy;
 import org.apereo.cas.authentication.DefaultAuthenticationServiceSelectionPlan;
-import org.apereo.cas.authentication.DefaultMultifactorTriggerSelectionStrategy;
-import org.apereo.cas.services.web.support.DefaultAuthenticationAttributeReleasePolicy;
 import org.apereo.cas.validation.DefaultServiceTicketValidationAuthorizersExecutionPlan;
 import org.apereo.cas.web.AbstractServiceValidateController;
 import org.apereo.cas.web.AbstractServiceValidateControllerTests;
 import org.apereo.cas.web.ServiceValidateController;
+import org.apereo.cas.web.view.attributes.NoOpProtocolAttributesRenderer;
+
+import lombok.val;
+import org.apache.commons.lang3.tuple.Pair;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -17,13 +19,13 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.mock.web.MockServletContext;
 import org.springframework.web.context.support.GenericWebApplicationContext;
-import org.springframework.web.servlet.ModelAndView;
 import org.springframework.web.servlet.View;
 import org.springframework.web.servlet.support.RequestContext;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -34,7 +36,6 @@ import static org.junit.Assert.*;
  * @since 4.0.0
  */
 public class Cas20ResponseViewTests extends AbstractServiceValidateControllerTests {
-
     @Autowired
     @Qualifier("cas3ServiceJsonView")
     private View cas3ServiceJsonView;
@@ -48,29 +49,29 @@ public class Cas20ResponseViewTests extends AbstractServiceValidateControllerTes
     private View cas2ServiceFailureView;
 
     @Override
-    public AbstractServiceValidateController getServiceValidateControllerInstance() throws Exception {
+    public AbstractServiceValidateController getServiceValidateControllerInstance() {
         return new ServiceValidateController(
-                getValidationSpecification(),
-                getAuthenticationSystemSupport(), getServicesManager(),
-                getCentralAuthenticationService(),
-                getProxyHandler(),
-                getArgumentExtractor(),
-                new DefaultMultifactorTriggerSelectionStrategy("", ""),
-                new DefaultAuthenticationContextValidator("", "OPEN", "test"),
-                cas3ServiceJsonView, cas2SuccessView, 
-                cas2ServiceFailureView, "authenticationContext",
-                new DefaultServiceTicketValidationAuthorizersExecutionPlan()
+            getValidationSpecification(),
+            getAuthenticationSystemSupport(), getServicesManager(),
+            getCentralAuthenticationService(),
+            getProxyHandler(),
+            getArgumentExtractor(),
+            (assertion, request) -> Pair.of(Boolean.TRUE, Optional.empty()),
+            cas3ServiceJsonView, cas2SuccessView,
+            cas2ServiceFailureView, "authenticationContext",
+            new DefaultServiceTicketValidationAuthorizersExecutionPlan(),
+            true
         );
     }
 
     @Test
     public void verifyView() throws Exception {
-        final ModelAndView modelAndView = this.getModelAndViewUponServiceValidationWithSecurePgtUrl();
-        final MockHttpServletRequest req = new MockHttpServletRequest(new MockServletContext());
+        val modelAndView = this.getModelAndViewUponServiceValidationWithSecurePgtUrl();
+        val req = new MockHttpServletRequest(new MockServletContext());
         req.setAttribute(RequestContext.WEB_APPLICATION_CONTEXT_ATTRIBUTE, new GenericWebApplicationContext(req.getServletContext()));
-        
-        final MockHttpServletResponse resp = new MockHttpServletResponse();
-        final View delegatedView = new View() {
+
+        val resp = new MockHttpServletResponse();
+        val delegatedView = new View() {
             @Override
             public String getContentType() {
                 return "text/html";
@@ -81,9 +82,9 @@ public class Cas20ResponseViewTests extends AbstractServiceValidateControllerTes
                 map.forEach(request::setAttribute);
             }
         };
-        final Cas20ResponseView view = new Cas20ResponseView(true, null,
-                null, "attribute", delegatedView, new DefaultAuthenticationAttributeReleasePolicy(),
-                new DefaultAuthenticationServiceSelectionPlan());
+        val view = new Cas20ResponseView(true, null,
+            null, delegatedView, new DefaultAuthenticationAttributeReleasePolicy("attribute"),
+            new DefaultAuthenticationServiceSelectionPlan(), new NoOpProtocolAttributesRenderer());
         view.render(modelAndView.getModel(), req, resp);
 
         assertNotNull(req.getAttribute(CasViewConstants.MODEL_ATTRIBUTE_NAME_CHAINED_AUTHENTICATIONS));

@@ -1,13 +1,14 @@
 package org.apereo.cas.ticket.registry.queue;
 
-import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import org.apereo.cas.StringBean;
 import org.apereo.cas.ticket.Ticket;
 import org.apereo.cas.ticket.registry.TicketRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import lombok.Getter;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * This is {@link UpdateTicketMessageQueueCommand}.
@@ -15,10 +16,12 @@ import org.slf4j.LoggerFactory;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@Slf4j
+@Getter
 public class UpdateTicketMessageQueueCommand extends BaseMessageQueueCommand {
-    private static final Logger LOGGER = LoggerFactory.getLogger(UpdateTicketMessageQueueCommand.class);
-    
+    private static final long serialVersionUID = -4179190682337040669L;
+
     @JsonProperty
     private Ticket ticket;
 
@@ -28,13 +31,9 @@ public class UpdateTicketMessageQueueCommand extends BaseMessageQueueCommand {
         this.ticket = ticket;
     }
 
-    public Ticket getTicket() {
-        return ticket;
-    }
-
     @Override
     public void execute(final TicketRegistry registry) {
-        LOGGER.debug("Executing queue command on ticket registry id [{}] to update ticket [{}]", ticket);
+        LOGGER.debug("Executing queue command on ticket registry id [{}] to update ticket [{}]", getId().getId(), ticket);
         registry.updateTicket(ticket);
     }
 }

@@ -5,13 +5,14 @@ import org.apereo.cas.support.saml.OpenSamlConfigBean;
 import org.apereo.cas.support.saml.services.SamlRegisteredService;
 import org.apereo.cas.support.saml.services.idp.metadata.SamlMetadataDocument;
 import org.apereo.cas.support.saml.services.idp.metadata.cache.resolver.BaseSamlRegisteredServiceMetadataResolver;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.opensaml.saml.metadata.resolver.MetadataResolver;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.MongoTemplate;
 
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -21,10 +22,9 @@ import java.util.stream.Collectors;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
 public class MongoDbSamlRegisteredServiceMetadataResolver extends BaseSamlRegisteredServiceMetadataResolver {
-    private static final Logger LOGGER = LoggerFactory.getLogger(MongoDbSamlRegisteredServiceMetadataResolver.class);
-
-    private final MongoTemplate mongoTemplate;
+    private final transient MongoTemplate mongoTemplate;
     private final String collectionName;
 
     public MongoDbSamlRegisteredServiceMetadataResolver(final SamlIdPProperties samlIdPProperties,
@@ -35,9 +35,10 @@ public class MongoDbSamlRegisteredServiceMetadataResolver extends BaseSamlRegist
     }
 
     @Override
-    public Collection<MetadataResolver> resolve(final SamlRegisteredService service) {
+    public Collection<? extends MetadataResolver> resolve(final SamlRegisteredService service) {
         try {
-            final List<SamlMetadataDocument> documents = mongoTemplate.findAll(SamlMetadataDocument.class, this.collectionName);
+            LOGGER.debug("Fetching metadata documents from collection [{}]", this.collectionName);
+            val documents = mongoTemplate.findAll(SamlMetadataDocument.class, this.collectionName);
             return documents
                 .stream()
                 .map(doc -> buildMetadataResolverFrom(service, doc))
@@ -46,13 +47,13 @@ public class MongoDbSamlRegisteredServiceMetadataResolver extends BaseSamlRegist
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
         }
-        return null;
+        return new ArrayList<>();
     }
 
     @Override
     public boolean supports(final SamlRegisteredService service) {
         try {
-            final String metadataLocation = service.getMetadataLocation();
+            val metadataLocation = service.getMetadataLocation();
             return metadataLocation.trim().startsWith("mongodb://");
         } catch (final Exception e) {
             LOGGER.error(e.getMessage(), e);
@@ -63,5 +64,13 @@ public class MongoDbSamlRegisteredServiceMetadataResolver extends BaseSamlRegist
     @Override
     public void saveOrUpdate(final SamlMetadataDocument document) {
         this.mongoTemplate.save(document, this.collectionName);
+    }
+
+    @Override
+    public boolean isAvailable(final SamlRegisteredService service) {
+        if (supports(service)) {
+            return mongoTemplate.collectionExists(this.collectionName);
+        }
+        return false;
     }
 }

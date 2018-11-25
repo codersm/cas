@@ -1,15 +1,18 @@
 package org.apereo.cas.authentication.principal;
 
-import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apereo.cas.CasProtocolConstants;
-import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.util.HttpRequestUtils;
+import org.apereo.cas.util.function.FunctionUtils;
 
-import javax.servlet.http.HttpServletRequest;
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
+import lombok.Setter;
+import lombok.val;
+import org.apache.commons.lang3.StringUtils;
+
 import java.util.Map;
+import java.util.function.Function;
 
 /**
  * Abstract response builder that provides wrappers for building
@@ -18,6 +21,9 @@ import java.util.Map;
  * @author Misagh Moayyed
  * @since 4.2
  */
+@Getter
+@Setter
+@RequiredArgsConstructor
 public abstract class AbstractWebApplicationServiceResponseBuilder implements ResponseBuilder<WebApplicationService> {
     private static final long serialVersionUID = -4584738964007702423L;
 
@@ -26,9 +32,7 @@ public abstract class AbstractWebApplicationServiceResponseBuilder implements Re
      */
     protected final ServicesManager servicesManager;
 
-    public AbstractWebApplicationServiceResponseBuilder(final ServicesManager servicesManager) {
-        this.servicesManager = servicesManager;
-    }
+    private int order;
 
     /**
      * Build redirect.
@@ -52,7 +56,6 @@ public abstract class AbstractWebApplicationServiceResponseBuilder implements Re
         return DefaultResponse.getHeaderResponse(service.getOriginalUrl(), parameters);
     }
 
-
     /**
      * Build post.
      *
@@ -71,50 +74,22 @@ public abstract class AbstractWebApplicationServiceResponseBuilder implements Re
      * @return the response type
      */
     protected Response.ResponseType getWebApplicationServiceResponseType(final WebApplicationService finalService) {
-        final HttpServletRequest request = HttpRequestUtils.getHttpServletRequestFromRequestAttributes();
-        String method = request != null ? request.getParameter(CasProtocolConstants.PARAMETER_METHOD) : null;
-        if (StringUtils.isBlank(method)) {
-            final RegisteredService registeredService = this.servicesManager.findServiceBy(finalService);
-            if (registeredService != null) {
-                method = registeredService.getResponseType();
-            }
-        }
+        val request = HttpRequestUtils.getHttpServletRequestFromRequestAttributes();
+        val methodRequest = request != null ? request.getParameter(CasProtocolConstants.PARAMETER_METHOD) : null;
+        final Function<String, String> func = FunctionUtils.doIf(StringUtils::isBlank,
+            t -> {
+                val registeredService = this.servicesManager.findServiceBy(finalService);
+                if (registeredService != null) {
+                    return registeredService.getResponseType();
+                }
+                return null;
+            },
+            f -> methodRequest);
 
+        val method = func.apply(methodRequest);
         if (StringUtils.isBlank(method)) {
             return Response.ResponseType.REDIRECT;
         }
-
-        if (StringUtils.equalsIgnoreCase(method, Response.ResponseType.HEADER.name())) {
-            return Response.ResponseType.HEADER;
-        }
-        if (StringUtils.equalsIgnoreCase(method, Response.ResponseType.POST.name())) {
-            return Response.ResponseType.POST;
-        }
-
-        return Response.ResponseType.REDIRECT;
-    }
-
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        return new EqualsBuilder().isEquals();
-    }
-
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder().toHashCode();
-    }
-
-    @Override
-    public int getOrder() {
-        return 0;
+        return Response.ResponseType.valueOf(method.toUpperCase());
     }
 }

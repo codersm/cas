@@ -2,6 +2,7 @@ package org.apereo.cas;
 
 import org.apereo.cas.ticket.registry.DefaultHazelcastInstanceConfigurationTests;
 import org.apereo.cas.ticket.registry.HazelcastTicketRegistryTests;
+
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 

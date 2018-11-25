@@ -1,6 +1,7 @@
 package org.apereo.cas.web.report;
 
 import org.apereo.cas.util.SystemUtils;
+
 import org.springframework.boot.actuate.info.Info;
 import org.springframework.boot.actuate.info.InfoContributor;
 

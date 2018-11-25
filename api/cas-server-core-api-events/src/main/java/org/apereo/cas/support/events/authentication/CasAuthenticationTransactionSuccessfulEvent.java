@@ -3,6 +3,7 @@ package org.apereo.cas.support.events.authentication;
 import org.apereo.cas.authentication.Credential;
 import org.apereo.cas.support.events.AbstractCasEvent;
 
+
 /**
  * This is {@link CasAuthenticationTransactionSuccessfulEvent}.
  *

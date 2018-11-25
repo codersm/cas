@@ -1,17 +1,18 @@
 package org.apereo.cas.ticket.support;
 
+import org.apereo.cas.ticket.TicketState;
+
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import org.apache.commons.lang3.builder.EqualsBuilder;
-import org.apache.commons.lang3.builder.HashCodeBuilder;
-import org.apereo.cas.ticket.TicketState;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.util.Assert;
 
-import javax.annotation.PostConstruct;
 import java.time.ZoneOffset;
 import java.time.ZonedDateTime;
 import java.time.temporal.ChronoUnit;
@@ -23,19 +24,17 @@ import java.time.temporal.ChronoUnit;
  * @author William G. Thompson, Jr.
  * @since 3.4.10
  */
-@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS, include = JsonTypeInfo.As.PROPERTY)
+@JsonTypeInfo(use = JsonTypeInfo.Id.CLASS)
+@Slf4j
+@NoArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+@ToString(callSuper = true)
 public class TicketGrantingTicketExpirationPolicy extends AbstractCasExpirationPolicy {
 
     /**
      * Serialization support.
      */
     private static final long serialVersionUID = 7670537200691354820L;
-
-    /**
-     * The Logger instance for this class. Using a transient instance field for the Logger doesn't work, on object
-     * deserialization the field is null.
-     */
-    private static final Logger LOGGER = LoggerFactory.getLogger(TicketGrantingTicketExpirationPolicy.class);
 
     /**
      * Maximum time this ticket is valid.
@@ -47,9 +46,6 @@ public class TicketGrantingTicketExpirationPolicy extends AbstractCasExpirationP
      */
     private long timeToKillInSeconds;
 
-    public TicketGrantingTicketExpirationPolicy() {
-    }
-
     /**
      * Instantiates a new Ticket granting ticket expiration policy.
      *
@@ -57,41 +53,30 @@ public class TicketGrantingTicketExpirationPolicy extends AbstractCasExpirationP
      * @param timeToKill    the time to kill
      */
     @JsonCreator
-    public TicketGrantingTicketExpirationPolicy(@JsonProperty("timeToLive") final long maxTimeToLive,
-                                                @JsonProperty("timeToIdle") final long timeToKill) {
+    public TicketGrantingTicketExpirationPolicy(@JsonProperty("timeToLive") final long maxTimeToLive, @JsonProperty("timeToIdle") final long timeToKill) {
         this.maxTimeToLiveInSeconds = maxTimeToLive;
         this.timeToKillInSeconds = timeToKill;
     }
 
-    /**
-     * After properties set.
-     */
-    @PostConstruct
-    public void afterPropertiesSet() {
-        Assert.isTrue(this.maxTimeToLiveInSeconds >= this.timeToKillInSeconds,
-                "maxTimeToLiveInSeconds must be greater than or equal to timeToKillInSeconds.");
-    }
-
     @Override
     public boolean isExpired(final TicketState ticketState) {
-        final ZonedDateTime currentSystemTime = getCurrentSystemTime();
-        final ZonedDateTime creationTime = ticketState.getCreationTime();
-        final ZonedDateTime lastTimeUsed = ticketState.getLastTimeUsed();
+        Assert.isTrue(this.maxTimeToLiveInSeconds >= this.timeToKillInSeconds,
+            "maxTimeToLiveInSeconds must be greater than or equal to timeToKillInSeconds.");
 
-        // Ticket has been used, check maxTimeToLive (hard window)
-        ZonedDateTime expirationTime = creationTime.plus(this.maxTimeToLiveInSeconds, ChronoUnit.SECONDS);
+        val currentSystemTime = getCurrentSystemTime();
+        val creationTime = ticketState.getCreationTime();
+        val lastTimeUsed = ticketState.getLastTimeUsed();
+        val expirationTime = creationTime.plus(this.maxTimeToLiveInSeconds, ChronoUnit.SECONDS);
         if (currentSystemTime.isAfter(expirationTime)) {
-            LOGGER.debug("Ticket is expired because the time since creation [{}] is greater than current system time", expirationTime, currentSystemTime);
+            LOGGER.debug("Ticket is expired because the time since creation [{}] is greater than current system time [{}]", expirationTime, currentSystemTime);
             return true;
         }
-
-        expirationTime = lastTimeUsed.plus(this.timeToKillInSeconds, ChronoUnit.SECONDS);
-        if (currentSystemTime.isAfter(expirationTime)) {
+        val expirationTimeKill = lastTimeUsed.plus(this.timeToKillInSeconds, ChronoUnit.SECONDS);
+        if (currentSystemTime.isAfter(expirationTimeKill)) {
             LOGGER.debug("Ticket is expired because the time since last use is greater than timeToKillInSeconds");
             return true;
         }
-
-        return false;
+        return super.isExpired(ticketState);
     }
 
     /**
@@ -113,30 +98,5 @@ public class TicketGrantingTicketExpirationPolicy extends AbstractCasExpirationP
     public Long getTimeToIdle() {
         return this.timeToKillInSeconds;
     }
-    
-    @Override
-    public boolean equals(final Object obj) {
-        if (obj == null) {
-            return false;
-        }
-        if (obj == this) {
-            return true;
-        }
-        if (obj.getClass() != getClass()) {
-            return false;
-        }
-        final TicketGrantingTicketExpirationPolicy rhs = (TicketGrantingTicketExpirationPolicy) obj;
-        return new EqualsBuilder()
-                .append(this.maxTimeToLiveInSeconds, rhs.maxTimeToLiveInSeconds)
-                .append(this.timeToKillInSeconds, rhs.timeToKillInSeconds)
-                .isEquals();
-    }
 
-    @Override
-    public int hashCode() {
-        return new HashCodeBuilder()
-                .append(this.maxTimeToLiveInSeconds)
-                .append(this.timeToKillInSeconds)
-                .toHashCode();
-    }
 }

@@ -1,33 +1,37 @@
 package org.apereo.cas.services;
 
+import org.apereo.cas.CasProtocolConstants;
 import org.apereo.cas.authentication.Authentication;
-import org.apereo.cas.authentication.AuthenticationHandler;
-import org.apereo.cas.authentication.BasicCredentialMetaData;
-import org.apereo.cas.authentication.CredentialMetaData;
 import org.apereo.cas.authentication.DefaultAuthenticationBuilder;
-import org.apereo.cas.authentication.DefaultHandlerResult;
-import org.apereo.cas.authentication.HttpBasedServiceCredential;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.DefaultAuthenticationHandlerExecutionResult;
+import org.apereo.cas.authentication.credential.HttpBasedServiceCredential;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.handler.support.SimpleTestUsernamePasswordAuthenticationHandler;
+import org.apereo.cas.authentication.metadata.BasicCredentialMetaData;
 import org.apereo.cas.authentication.principal.AbstractWebApplicationService;
-import org.apereo.cas.authentication.principal.DefaultPrincipalFactory;
 import org.apereo.cas.authentication.principal.Principal;
+import org.apereo.cas.authentication.principal.PrincipalFactoryUtils;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.authentication.principal.WebApplicationServiceFactory;
 import org.apereo.cas.authentication.principal.cache.AbstractPrincipalAttributesRepository;
 import org.apereo.cas.authentication.principal.cache.CachingPrincipalAttributesRepository;
-import org.apereo.cas.services.RegisteredService.LogoutType;
 import org.apereo.cas.services.support.RegisteredServiceRegexAttributeFilter;
-import org.apereo.cas.util.RandomUtils;
+
+import lombok.SneakyThrows;
+import lombok.experimental.UtilityClass;
+import lombok.val;
+import org.apache.commons.lang3.RandomUtils;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -36,13 +40,12 @@ import java.util.concurrent.TimeUnit;
  * @author Misagh Moayyed
  * @since 4.2.0
  */
-public final class RegisteredServiceTestUtils {
+@UtilityClass
+public class RegisteredServiceTestUtils {
     public static final String CONST_USERNAME = "test";
     public static final String CONST_TEST_URL = "https://google.com";
     public static final String CONST_TEST_URL2 = "https://example.com";
-
-    private RegisteredServiceTestUtils() {
-    }
+    public static final String CONST_TEST_URL3 = "https://another.example.com";
 
     public static HttpBasedServiceCredential getHttpBasedServiceCredentials() {
         return getHttpBasedServiceCredentials(CONST_TEST_URL);
@@ -57,7 +60,7 @@ public final class RegisteredServiceTestUtils {
     }
 
     public static UsernamePasswordCredential getCredentialsWithSameUsernameAndPassword(final String username) {
-        final UsernamePasswordCredential usernamePasswordCredentials = new UsernamePasswordCredential();
+        val usernamePasswordCredentials = new UsernamePasswordCredential();
         usernamePasswordCredentials.setUsername(username);
         usernamePasswordCredentials.setPassword(username);
 
@@ -65,20 +68,20 @@ public final class RegisteredServiceTestUtils {
     }
 
     public static UsernamePasswordCredential getCredentialsWithDifferentUsernameAndPassword(final String username, final String password) {
-        final UsernamePasswordCredential usernamePasswordCredentials = new UsernamePasswordCredential();
+        val usernamePasswordCredentials = new UsernamePasswordCredential();
         usernamePasswordCredentials.setUsername(username);
         usernamePasswordCredentials.setPassword(password);
 
         return usernamePasswordCredentials;
     }
 
-    public static Service getService() {
+    public static AbstractWebApplicationService getService() {
         return getService(CONST_TEST_URL);
     }
 
     public static AbstractWebApplicationService getService(final String name) {
-        final MockHttpServletRequest request = new MockHttpServletRequest();
-        request.addParameter("service", name);
+        val request = new MockHttpServletRequest();
+        request.addParameter(CasProtocolConstants.PARAMETER_SERVICE, name);
         return (AbstractWebApplicationService) new WebApplicationServiceFactory().createService(request);
     }
 
@@ -87,7 +90,7 @@ public final class RegisteredServiceTestUtils {
     }
 
     public static Map<String, Set<String>> getTestAttributes() {
-        final Map<String, Set<String>> attributes = new HashMap<>();
+        val attributes = new HashMap<String, Set<String>>();
         Set<String> attributeValues = new HashSet<>();
         attributeValues.add("uid");
 
@@ -110,46 +113,47 @@ public final class RegisteredServiceTestUtils {
     public static AbstractRegisteredService getRegisteredService() {
         return getRegisteredService(CONST_TEST_URL);
     }
-    
+
+    @SneakyThrows
+    public static AbstractRegisteredService getRegisteredService(final String id, final Class<? extends RegisteredService> clazz) {
+        val s = (AbstractRegisteredService) clazz.getDeclaredConstructor().newInstance();
+        s.setServiceId(id);
+        s.setEvaluationOrder(1);
+        s.setName("TestService" + UUID.randomUUID().toString());
+        s.setDescription("Registered service description");
+        s.setProxyPolicy(new RegexMatchingRegisteredServiceProxyPolicy("^https?://.+"));
+        s.setId(RandomUtils.nextLong());
+        s.setTheme("exampleTheme");
+        s.setUsernameAttributeProvider(new PrincipalAttributeRegisteredServiceUsernameProvider("uid"));
+        val accessStrategy = new DefaultRegisteredServiceAccessStrategy(true, true);
+        accessStrategy.setRequireAllAttributes(true);
+        accessStrategy.setRequiredAttributes(getTestAttributes());
+        accessStrategy.setUnauthorizedRedirectUrl(new URI("https://www.github.com"));
+        s.setAccessStrategy(accessStrategy);
+        s.setLogo("https://logo.example.org/logo.png");
+        s.setLogoutType(RegisteredServiceLogoutType.BACK_CHANNEL);
+        s.setLogoutUrl("https://sys.example.org/logout.png");
+        s.setProxyPolicy(new RegexMatchingRegisteredServiceProxyPolicy("^http.+"));
+
+        s.setPublicKey(new RegisteredServicePublicKeyImpl("classpath:RSA1024Public.key", "RSA"));
+
+        val policy = new ReturnAllowedAttributeReleasePolicy();
+        policy.setAuthorizedToReleaseCredentialPassword(true);
+        policy.setAuthorizedToReleaseProxyGrantingTicket(true);
+
+        val repo = new CachingPrincipalAttributesRepository(TimeUnit.SECONDS.name(), 10);
+        repo.setMergingStrategy(AbstractPrincipalAttributesRepository.MergingStrategy.ADD);
+        policy.setPrincipalAttributesRepository(repo);
+        policy.setAttributeFilter(new RegisteredServiceRegexAttributeFilter("https://.+"));
+        policy.setAllowedAttributes(new ArrayList<>(getTestAttributes().keySet()));
+        s.setAttributeReleasePolicy(policy);
+
+        return s;
+    }
+
+    @SneakyThrows
     public static AbstractRegisteredService getRegisteredService(final String id) {
-        try {
-            final RegexRegisteredService s = new RegexRegisteredService();
-            s.setServiceId(id);
-            s.setEvaluationOrder(1);
-            s.setName("Test registered service " + id);
-            s.setDescription("Registered service description");
-            s.setProxyPolicy(new RegexMatchingRegisteredServiceProxyPolicy("^https?://.+"));
-            s.setId(RandomUtils.getInstanceNative().nextInt(Math.abs(s.hashCode())));
-            s.setTheme("exampleTheme");
-            s.setUsernameAttributeProvider(new PrincipalAttributeRegisteredServiceUsernameProvider("uid"));
-            final DefaultRegisteredServiceAccessStrategy accessStrategy =
-                    new DefaultRegisteredServiceAccessStrategy(true, true);
-            accessStrategy.setRequireAllAttributes(true);
-            accessStrategy.setRequiredAttributes(getTestAttributes());
-            s.setAccessStrategy(accessStrategy);
-            s.setLogo("https://logo.example.org/logo.png");
-            s.setLogoutType(LogoutType.BACK_CHANNEL);
-            s.setLogoutUrl(new URL("https://sys.example.org/logout.png"));
-            s.setProxyPolicy(new RegexMatchingRegisteredServiceProxyPolicy("^http.+"));
-
-            s.setPublicKey(new RegisteredServicePublicKeyImpl("classpath:RSA1024Public.key", "RSA"));
-
-            final ReturnAllowedAttributeReleasePolicy policy = new ReturnAllowedAttributeReleasePolicy();
-            policy.setAuthorizedToReleaseCredentialPassword(true);
-            policy.setAuthorizedToReleaseProxyGrantingTicket(true);
-
-            final CachingPrincipalAttributesRepository repo =
-                    new CachingPrincipalAttributesRepository(TimeUnit.SECONDS.name(), 10);
-            repo.setMergingStrategy(AbstractPrincipalAttributesRepository.MergingStrategy.ADD);
-            policy.setPrincipalAttributesRepository(repo);
-            policy.setAttributeFilter(new RegisteredServiceRegexAttributeFilter("https://.+"));
-            policy.setAllowedAttributes(new ArrayList<>(getTestAttributes().keySet()));
-            s.setAttributeReleasePolicy(policy);
-
-            return s;
-        } catch (final Exception e) {
-            throw new RuntimeException(e.getMessage(), e);
-        }
+        return getRegisteredService(id, RegexRegisteredService.class);
     }
 
     public static Principal getPrincipal() {
@@ -161,7 +165,7 @@ public final class RegisteredServiceTestUtils {
     }
 
     public static Principal getPrincipal(final String name, final Map<String, Object> attributes) {
-        return new DefaultPrincipalFactory().createPrincipal(name, attributes);
+        return PrincipalFactoryUtils.newPrincipalFactory().createPrincipal(name, attributes);
     }
 
     public static Authentication getAuthentication() {
@@ -177,11 +181,11 @@ public final class RegisteredServiceTestUtils {
     }
 
     public static Authentication getAuthentication(final Principal principal, final Map<String, Object> attributes) {
-        final AuthenticationHandler handler = new SimpleTestUsernamePasswordAuthenticationHandler();
-        final CredentialMetaData meta = new BasicCredentialMetaData(new UsernamePasswordCredential());
+        val handler = new SimpleTestUsernamePasswordAuthenticationHandler();
+        val meta = new BasicCredentialMetaData(new UsernamePasswordCredential());
         return new DefaultAuthenticationBuilder(principal)
             .addCredential(meta)
-            .addSuccess("testHandler", new DefaultHandlerResult(handler, meta))
+            .addSuccess("testHandler", new DefaultAuthenticationHandlerExecutionResult(handler, meta))
             .setAttributes(attributes)
             .build();
     }

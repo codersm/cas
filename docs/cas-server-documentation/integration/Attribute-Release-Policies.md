@@ -1,6 +1,7 @@
 ---
 layout: default
 title: CAS - Attribute Release Policies
+category: Attributes
 ---
 
 # Attribute Release Policies
@@ -14,7 +15,7 @@ The following settings are shared by all attribute release policies:
 | `authorizedToReleaseCredentialPassword`  | Boolean to define whether the service is authorized to [release the credential as an attribute](ClearPass.html).
 | `authorizedToReleaseProxyGrantingTicket` | Boolean to define whether the service is authorized to [release the proxy-granting ticket id as an attribute](../installation/Configuring-Proxy-Authentication.html).
 | `excludeDefaultAttributes`               | Boolean to define whether this policy should exclude the default global bundle of attributes for release.
-| `authorizedToReleaseAuthenticationAttributes`   | Boolean to define whether this policy should exclude the authentication/protocol attributes for release. Authentication attributes are considered those that are not tied to a specific principal and define extra supplamentary metadata about the authentication event itself, such as the commencement date.
+| `authorizedToReleaseAuthenticationAttributes`   | Boolean to define whether this policy should exclude the authentication/protocol attributes for release. Authentication attributes are considered those that are not tied to a specific principal and define extra supplementary metadata about the authentication event itself, such as the commencement date.
 | `principalIdAttribute`                   | An attribute name of your own choosing that will be stuffed into the final bundle of attributes, carrying the CAS authenticated principal identifier. By default, the principal id is *NOT* released as an attribute.
 
 <div class="alert alert-warning"><strong>Usage Warning!</strong><p>Think <strong>VERY CAREFULLY</strong> before turning on the above settings. Blindly authorizing an application to receive a proxy-granting ticket or the user credential
@@ -33,7 +34,7 @@ authentication handlers, date/time of the authentication, etc.
 
 Releasing authentication attributes to service providers and applications can be
 controlled to some extent. To learn more and see the relevant list of CAS properties,
-please [review this guide](../installation/Configuration-Properties.html#authentication-attributes).
+please [review this guide](../configuration/Configuration-Properties.html#authentication-attributes).
 
 
 ## Principal Attributes
@@ -46,7 +47,7 @@ to explicitly control the collection of attributes that may be authorized for re
 
 CAS provides the ability to release a bundle of principal attributes to all services by default. This bundle is not defined on a per-service basis and is always combined with attributes produced by the specific release policy of the service, such that for instance, you can devise rules to always release `givenName` and `cn` to every application, and additionally allow other specific principal attributes for only some applications per their attribute release policy.
 
-To see the relevant list of CAS properties, please [review this guide](../installation/Configuration-Properties.html#default-bundle).
+To see the relevant list of CAS properties, please [review this guide](../configuration/Configuration-Properties.html#default-bundle).
 
 ### Return All
 
@@ -194,7 +195,7 @@ have resolved a `uid` attribute with a value of `piper`, you could then consider
     "@class" : "org.apereo.cas.services.ReturnMappedAttributeReleasePolicy",
     "allowedAttributes" : {
       "@class" : "java.util.TreeMap",
-      "uid" : "groovy { return attributes['uid'] + ' is great' }"
+      "uid" : "groovy { return attributes['uid'].get(0) + ' is great' }"
     }
   }
 }

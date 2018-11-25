@@ -2,13 +2,14 @@ package org.apereo.cas.adaptors.trusted.authentication.handler.support;
 
 import org.apereo.cas.adaptors.trusted.authentication.principal.PrincipalBearingCredential;
 import org.apereo.cas.authentication.AbstractAuthenticationHandler;
+import org.apereo.cas.authentication.AuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.Credential;
-import org.apereo.cas.authentication.DefaultHandlerResult;
-import org.apereo.cas.authentication.HandlerResult;
+import org.apereo.cas.authentication.DefaultAuthenticationHandlerExecutionResult;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 
 /**
  * AuthenticationHandler which authenticates Principal-bearing credentials.
@@ -20,19 +21,23 @@ import org.slf4j.LoggerFactory;
  * @author Andrew Petro
  * @since 3.0.0
  */
+@Slf4j
 public class PrincipalBearingCredentialsAuthenticationHandler extends AbstractAuthenticationHandler {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(PrincipalBearingCredentialsAuthenticationHandler.class);
-
-    public PrincipalBearingCredentialsAuthenticationHandler(final String name, final ServicesManager servicesManager, final PrincipalFactory principalFactory) {
-        super(name, servicesManager, principalFactory, null);
+    public PrincipalBearingCredentialsAuthenticationHandler(final String name, final ServicesManager servicesManager,
+                                                            final PrincipalFactory principalFactory, final Integer order) {
+        super(name, servicesManager, principalFactory, order);
     }
 
     @Override
-    public HandlerResult authenticate(final Credential credential) {
+    public AuthenticationHandlerExecutionResult authenticate(final Credential credential) {
         LOGGER.debug("Trusting credential for: [{}]", credential);
-        final PrincipalBearingCredential bearingCredential = (PrincipalBearingCredential) credential;
-        return new DefaultHandlerResult(this, bearingCredential, bearingCredential.getPrincipal());
+        val bearingCredential = (PrincipalBearingCredential) credential;
+        return new DefaultAuthenticationHandlerExecutionResult(this, bearingCredential, bearingCredential.getPrincipal());
+    }
+
+    @Override
+    public boolean supports(final Class<? extends Credential> clazz) {
+        return PrincipalBearingCredential.class.isAssignableFrom(clazz);
     }
 
     @Override

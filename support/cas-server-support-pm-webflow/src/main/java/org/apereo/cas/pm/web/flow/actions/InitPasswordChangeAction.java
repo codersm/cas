@@ -1,7 +1,8 @@
 package org.apereo.cas.pm.web.flow.actions;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
-import org.springframework.beans.factory.annotation.Autowired;
+
+import lombok.RequiredArgsConstructor;
 import org.springframework.webflow.action.AbstractAction;
 import org.springframework.webflow.execution.Event;
 import org.springframework.webflow.execution.RequestContext;
@@ -12,9 +13,9 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
+@RequiredArgsConstructor
 public class InitPasswordChangeAction extends AbstractAction {
-    @Autowired
-    private CasConfigurationProperties casProperties;
+    private final CasConfigurationProperties casProperties;
 
     @Override
     protected Event doExecute(final RequestContext requestContext) {

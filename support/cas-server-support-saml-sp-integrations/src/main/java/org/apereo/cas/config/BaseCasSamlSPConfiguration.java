@@ -6,10 +6,12 @@ import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.support.saml.services.SamlRegisteredService;
 import org.apereo.cas.support.saml.services.idp.metadata.cache.SamlRegisteredServiceCachingMetadataResolver;
 import org.apereo.cas.util.SamlSPUtils;
+
+import lombok.val;
+import org.springframework.beans.factory.InitializingBean;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-
-import javax.annotation.PostConstruct;
 
 /**
  * This is {@link BaseCasSamlSPConfiguration}.
@@ -17,7 +19,7 @@ import javax.annotation.PostConstruct;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
-public abstract class BaseCasSamlSPConfiguration {
+public abstract class BaseCasSamlSPConfiguration implements InitializingBean {
     /**
      * CAS properties.
      */
@@ -26,19 +28,23 @@ public abstract class BaseCasSamlSPConfiguration {
 
     @Autowired
     @Qualifier("servicesManager")
-    private ServicesManager servicesManager;
+    private ObjectProvider<ServicesManager> servicesManager;
 
     @Autowired
     @Qualifier("defaultSamlRegisteredServiceCachingMetadataResolver")
-    private SamlRegisteredServiceCachingMetadataResolver samlRegisteredServiceCachingMetadataResolver;
+    private ObjectProvider<SamlRegisteredServiceCachingMetadataResolver> samlRegisteredServiceCachingMetadataResolver;
 
-    @PostConstruct
+    @Override
+    public void afterPropertiesSet() {
+        init();
+    }
+
     public void init() {
-        final SamlRegisteredService service = SamlSPUtils.newSamlServiceProviderService(getServiceProvider(),
-            samlRegisteredServiceCachingMetadataResolver);
+        val service = SamlSPUtils.newSamlServiceProviderService(getServiceProvider(),
+            samlRegisteredServiceCachingMetadataResolver.getIfAvailable());
         if (service != null) {
             finalizeRegisteredService(service);
-            SamlSPUtils.saveService(service, this.servicesManager);
+            SamlSPUtils.saveService(service, servicesManager.getIfAvailable());
         }
     }
 

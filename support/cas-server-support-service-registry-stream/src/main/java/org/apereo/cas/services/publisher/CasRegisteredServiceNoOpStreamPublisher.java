@@ -1,8 +1,8 @@
 package org.apereo.cas.services.publisher;
 
 import org.apereo.cas.services.RegisteredService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEvent;
 
 /**
@@ -11,12 +11,13 @@ import org.springframework.context.ApplicationEvent;
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@Slf4j
 public class CasRegisteredServiceNoOpStreamPublisher implements CasRegisteredServiceStreamPublisher {
-    private static final Logger LOGGER = LoggerFactory.getLogger(CasRegisteredServiceNoOpStreamPublisher.class);
+
 
     @Override
     public void publish(final RegisteredService service, final ApplicationEvent event) {
         LOGGER.warn("CAS is NOT configured to stream and broadcast registered services over a queue. "
-                + "This generally points to a configuration issue where a publisher instance is missing from the CAS runtime.");
+            + "This generally points to a configuration issue where a publisher instance is missing from the CAS runtime.");
     }
 }

@@ -2,6 +2,7 @@ package org.apereo.cas.adaptors.radius.web.flow;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.web.flow.configurer.AbstractCasMultifactorWebflowConfigurer;
+
 import org.springframework.context.ApplicationContext;
 import org.springframework.webflow.definition.registry.FlowDefinitionRegistry;
 import org.springframework.webflow.engine.builder.support.FlowBuilderServices;
@@ -14,12 +15,14 @@ import org.springframework.webflow.engine.builder.support.FlowBuilderServices;
  */
 public class RadiusMultifactorWebflowConfigurer extends AbstractCasMultifactorWebflowConfigurer {
 
-    /** Radius Webflow event id. */
+    /**
+     * Radius Webflow event id.
+     */
     public static final String MFA_RADIUS_EVENT_ID = "mfa-radius";
-    
+
     private final FlowDefinitionRegistry radiusFlowRegistry;
 
-    public RadiusMultifactorWebflowConfigurer(final FlowBuilderServices flowBuilderServices, 
+    public RadiusMultifactorWebflowConfigurer(final FlowBuilderServices flowBuilderServices,
                                               final FlowDefinitionRegistry loginFlowDefinitionRegistry,
                                               final FlowDefinitionRegistry radiusFlowRegistry,
                                               final ApplicationContext applicationContext,
@@ -30,6 +33,7 @@ public class RadiusMultifactorWebflowConfigurer extends AbstractCasMultifactorWe
 
     @Override
     protected void doInitialize() {
-        registerMultifactorProviderAuthenticationWebflow(getLoginFlow(), MFA_RADIUS_EVENT_ID, this.radiusFlowRegistry);
+        registerMultifactorProviderAuthenticationWebflow(getLoginFlow(), MFA_RADIUS_EVENT_ID,
+                this.radiusFlowRegistry, casProperties.getAuthn().getMfa().getRadius().getId());
     }
 }

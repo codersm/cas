@@ -2,8 +2,10 @@ package org.apereo.cas.web.config;
 
 import org.apereo.cas.configuration.CasConfigurationProperties;
 import org.apereo.cas.web.view.CasProtocolView;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.ConfigurableBeanFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationContext;
@@ -11,7 +13,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.http.MediaType;
-import org.thymeleaf.spring4.SpringTemplateEngine;
+import org.thymeleaf.spring5.SpringTemplateEngine;
 
 /**
  * This is {@link CasProtocolViewsConfiguration} that attempts to create Spring-managed beans
@@ -45,39 +47,41 @@ public class CasProtocolViewsConfiguration {
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas2SuccessView() {
             return new CasProtocolView(casProperties.getView().getCas2().getSuccess(),
-                    applicationContext,
-                    springTemplateEngine, thymeleafProperties,
-                    MediaType.APPLICATION_XML_VALUE);
+                applicationContext,
+                springTemplateEngine, thymeleafProperties,
+                MediaType.APPLICATION_XML_VALUE);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas2ServiceFailureView() {
             return new CasProtocolView(casProperties.getView().getCas2().getFailure(), applicationContext,
-                    springTemplateEngine, thymeleafProperties);
+                springTemplateEngine, thymeleafProperties);
         }
 
+        @ConditionalOnProperty(prefix = "cas.sso", name = "proxyAuthnEnabled", havingValue = "true", matchIfMissing = true)
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas2ProxyFailureView() {
             return new CasProtocolView(casProperties.getView().getCas2().getProxy().getFailure(), applicationContext,
-                    springTemplateEngine, thymeleafProperties,
-                    MediaType.APPLICATION_XML_VALUE);
+                springTemplateEngine, thymeleafProperties,
+                MediaType.APPLICATION_XML_VALUE);
         }
 
+        @ConditionalOnProperty(prefix = "cas.sso", name = "proxyAuthnEnabled", havingValue = "true", matchIfMissing = true)
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas2ProxySuccessView() {
             return new CasProtocolView(casProperties.getView().getCas2().getProxy().getSuccess(),
-                    applicationContext, springTemplateEngine, thymeleafProperties,
-                    MediaType.APPLICATION_XML_VALUE);
+                applicationContext, springTemplateEngine, thymeleafProperties,
+                MediaType.APPLICATION_XML_VALUE);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas3SuccessView() {
             return new CasProtocolView(casProperties.getView().getCas3().getSuccess(),
-                    applicationContext, springTemplateEngine, thymeleafProperties);
+                applicationContext, springTemplateEngine, thymeleafProperties);
         }
 
 
@@ -85,15 +89,15 @@ public class CasProtocolViewsConfiguration {
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView cas3ServiceFailureView() {
             return new CasProtocolView(casProperties.getView().getCas3().getFailure(),
-                    applicationContext, springTemplateEngine, thymeleafProperties,
-                    MediaType.APPLICATION_XML_VALUE);
+                applicationContext, springTemplateEngine, thymeleafProperties,
+                MediaType.APPLICATION_XML_VALUE);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView casPostResponseView() {
             return new CasProtocolView("protocol/casPostResponseView",
-                    applicationContext, springTemplateEngine, thymeleafProperties);
+                applicationContext, springTemplateEngine, thymeleafProperties);
         }
     }
 
@@ -108,6 +112,17 @@ public class CasProtocolViewsConfiguration {
             return new CasProtocolView("protocol/oauth/confirm", applicationContext, springTemplateEngine, thymeleafProperties);
         }
 
+        @Bean
+        @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+        public CasProtocolView oauthDeviceCodeApprovalView() {
+            return new CasProtocolView("protocol/oauth/deviceCodeApproval", applicationContext, springTemplateEngine, thymeleafProperties);
+        }
+
+        @Bean
+        @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+        public CasProtocolView oauthDeviceCodeApprovedView() {
+            return new CasProtocolView("protocol/oauth/deviceCodeApproved", applicationContext, springTemplateEngine, thymeleafProperties);
+        }
     }
 
     /**
@@ -132,28 +147,28 @@ public class CasProtocolViewsConfiguration {
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView casOpenIdServiceFailureView() {
             return new CasProtocolView("protocol/openid/casOpenIdServiceFailureView",
-                    applicationContext, springTemplateEngine, thymeleafProperties);
+                applicationContext, springTemplateEngine, thymeleafProperties);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView casOpenIdServiceSuccessView() {
             return new CasProtocolView("protocol/openid/casOpenIdServiceSuccessView", applicationContext,
-                    springTemplateEngine, thymeleafProperties);
+                springTemplateEngine, thymeleafProperties);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView casOpenIdAssociationSuccessView() {
             return new CasProtocolView("protocol/openid/casOpenIdAssociationSuccessView", applicationContext,
-                    springTemplateEngine, thymeleafProperties);
+                springTemplateEngine, thymeleafProperties);
         }
 
         @Bean
         @Scope(value = ConfigurableBeanFactory.SCOPE_PROTOTYPE)
         public CasProtocolView openIdProviderView() {
             return new CasProtocolView("protocol/openid/user", applicationContext,
-                    springTemplateEngine, thymeleafProperties);
+                springTemplateEngine, thymeleafProperties);
         }
 
     }

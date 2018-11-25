@@ -1,6 +1,7 @@
 package org.apereo.cas.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -25,8 +26,8 @@ public class TimeBasedRegisteredServiceAccessStrategyTests {
 
     @Test
     public void checkAuthorizationByRangePass() {
-        final TimeBasedRegisteredServiceAccessStrategy authz =
-                new TimeBasedRegisteredServiceAccessStrategy(true, true);
+        val authz =
+            new TimeBasedRegisteredServiceAccessStrategy(true, true);
         authz.setStartingDateTime(ZonedDateTime.now(ZoneOffset.UTC).toString());
         authz.setEndingDateTime(ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(10).toString());
         assertTrue(authz.isServiceAccessAllowed());
@@ -35,8 +36,8 @@ public class TimeBasedRegisteredServiceAccessStrategyTests {
 
     @Test
     public void checkAuthorizationByRangeFailStartTime() {
-        final TimeBasedRegisteredServiceAccessStrategy authz =
-                new TimeBasedRegisteredServiceAccessStrategy(true, true);
+        val authz =
+            new TimeBasedRegisteredServiceAccessStrategy(true, true);
         authz.setStartingDateTime(ZonedDateTime.now(ZoneOffset.UTC).plusDays(1).toString());
         authz.setEndingDateTime(ZonedDateTime.now(ZoneOffset.UTC).plusMinutes(10).toString());
         assertFalse(authz.isServiceAccessAllowed());
@@ -45,8 +46,8 @@ public class TimeBasedRegisteredServiceAccessStrategyTests {
 
     @Test
     public void checkAuthorizationByRangePassEndTime() {
-        final TimeBasedRegisteredServiceAccessStrategy authz =
-                new TimeBasedRegisteredServiceAccessStrategy(true, true);
+        val authz =
+            new TimeBasedRegisteredServiceAccessStrategy(true, true);
         authz.setStartingDateTime(ZonedDateTime.now(ZoneOffset.UTC).toString());
         authz.setEndingDateTime(ZonedDateTime.now(ZoneOffset.UTC).plusSeconds(30).toString());
         assertTrue(authz.isServiceAccessAllowed());
@@ -54,13 +55,9 @@ public class TimeBasedRegisteredServiceAccessStrategyTests {
 
     @Test
     public void verifySerializeATimeBasedRegisteredServiceAccessStrategyToJson() throws IOException {
-        final TimeBasedRegisteredServiceAccessStrategy authWritten =
-                new TimeBasedRegisteredServiceAccessStrategy(true, true);
-
+        val authWritten = new TimeBasedRegisteredServiceAccessStrategy(true, true);
         MAPPER.writeValue(JSON_FILE, authWritten);
-
-        final RegisteredServiceAccessStrategy credentialRead = MAPPER.readValue(JSON_FILE, TimeBasedRegisteredServiceAccessStrategy.class);
-
+        val credentialRead = MAPPER.readValue(JSON_FILE, TimeBasedRegisteredServiceAccessStrategy.class);
         assertEquals(authWritten, credentialRead);
     }
 }

@@ -3,6 +3,7 @@ package org.apereo.cas.authentication;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,6 +16,7 @@ import static org.junit.Assert.*;
 
 /**
  * Test for JSON Serialization
+ *
  * @author David Rodriguez
  * @since 5.0.0
  */
@@ -25,19 +27,19 @@ public class DefaultAuthenticationTests {
     private ObjectMapper mapper;
 
     @Before
-    public void setUp() {
+    public void initialize() {
         mapper = Jackson2ObjectMapperBuilder.json()
-                .featuresToDisable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
-                .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .build();
+            .featuresToDisable(DeserializationFeature.ADJUST_DATES_TO_CONTEXT_TIME_ZONE)
+            .featuresToDisable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
+            .build();
         mapper.findAndRegisterModules();
     }
-    
+
     @Test
     public void verifySerializeADefaultAuthenticationToJson() throws IOException {
-        final Authentication serviceWritten = CoreAuthenticationTestUtils.getAuthentication();
+        val serviceWritten = CoreAuthenticationTestUtils.getAuthentication();
         mapper.writeValue(JSON_FILE, serviceWritten);
-        final Authentication serviceRead = mapper.readValue(JSON_FILE, Authentication.class);
+        val serviceRead = mapper.readValue(JSON_FILE, Authentication.class);
         assertEquals(serviceWritten, serviceRead);
     }
 }

@@ -1,9 +1,8 @@
 package org.apereo.cas.util;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apereo.cas.ticket.UniqueTicketIdGenerator;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * An implementation of {@link UniqueTicketIdGenerator} that is able auto-configure
@@ -23,7 +22,7 @@ import org.slf4j.LoggerFactory;
  * @since 4.1.0
  */
 public class HostNameBasedUniqueTicketIdGenerator extends DefaultUniqueTicketIdGenerator {
-    private static final Logger LOGGER = LoggerFactory.getLogger(HostNameBasedUniqueTicketIdGenerator.class);
+
 
     /**
      * Instantiates a new Host name based unique ticket id generator.
@@ -55,56 +54,6 @@ public class HostNameBasedUniqueTicketIdGenerator extends DefaultUniqueTicketIdG
             return suffix;
         }
         return InetAddressUtils.getCasServerHostName();
-    }
-
-    /**
-     * The type Ticket granting ticket id generator.
-     */
-    public static class TicketGrantingTicketIdGenerator extends HostNameBasedUniqueTicketIdGenerator {
-
-        /**
-         * Instantiates a new Ticket granting ticket id generator.
-         *
-         * @param maxLength the max length
-         * @param suffix    the suffix
-         */
-        public TicketGrantingTicketIdGenerator(final int maxLength,
-                                               final String suffix) {
-            super(maxLength, suffix);
-        }
-    }
-
-    /**
-     * The type Service ticket id generator.
-     */
-    public static class ServiceTicketIdGenerator extends HostNameBasedUniqueTicketIdGenerator {
-
-        /**
-         * Instantiates a new Service ticket id generator.
-         *
-         * @param maxLength the max length
-         * @param suffix    the suffix
-         */
-        public ServiceTicketIdGenerator(final int maxLength,
-                                        final String suffix) {
-            super(maxLength, suffix);
-        }
-    }
-
-    /**
-     * The type Proxy ticket id generator.
-     */
-    public static class ProxyTicketIdGenerator extends HostNameBasedUniqueTicketIdGenerator {
-        /**
-         * Instantiates a new Proxy ticket id generator.
-         *
-         * @param maxLength the max length
-         * @param suffix    the suffix
-         */
-        public ProxyTicketIdGenerator(final int maxLength,
-                                      final String suffix) {
-            super(maxLength, suffix);
-        }
     }
 
 }

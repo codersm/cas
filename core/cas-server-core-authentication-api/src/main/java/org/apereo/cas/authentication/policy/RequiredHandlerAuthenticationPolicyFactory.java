@@ -6,6 +6,7 @@ import org.apereo.cas.authentication.ContextualAuthenticationPolicyFactory;
 import org.apereo.cas.services.RegisteredService;
 import org.apereo.cas.services.ServiceContext;
 
+
 /**
  * Produces {@link ContextualAuthenticationPolicy} instances that are satisfied iff the given {@link Authentication}
  * was created by authenticating credentials by all handlers named in
@@ -18,7 +19,7 @@ public class RequiredHandlerAuthenticationPolicyFactory implements ContextualAut
 
     @Override
     public ContextualAuthenticationPolicy<ServiceContext> createPolicy(final ServiceContext context) {
-        return new ContextualAuthenticationPolicy<ServiceContext>() {
+        return new ContextualAuthenticationPolicy<>() {
 
             @Override
             public ServiceContext getContext() {
@@ -28,7 +29,7 @@ public class RequiredHandlerAuthenticationPolicyFactory implements ContextualAut
             @Override
             public boolean isSatisfiedBy(final Authentication authentication) {
                 return context.getRegisteredService().getRequiredHandlers().stream()
-                        .allMatch(required -> authentication.getSuccesses().containsKey(required));
+                    .allMatch(required -> authentication.getSuccesses().containsKey(required));
             }
         };
     }

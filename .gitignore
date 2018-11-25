@@ -6,6 +6,7 @@ argfile*
 target
 test-output/
 bin/
+*.ignore
 *.ipr
 *.iml
 *.iws
@@ -23,12 +24,14 @@ rebel.xml
 *.log.gz
 node_modules/
 gruntfile.js
+fileTemplates/
 nodejs
 .gradle/
 build/
 MANIFEST.MF
 classes/
 *.bin
+**/gpg-*.txt
 
 out
 ajcore.*
@@ -37,9 +40,11 @@ reports
 webapp/resources/static/css/*
 *.asc
 /.nb-gradle/
+**/.sts4-cache/**
 etc/loadtests/loadtests/**
 etc/loadtests/locustfiles/**
 etc/loadtests/__pycache__/**
 webapp/resources/static/js/*-bundle.js
 **/k/
 **/dist/
+**/.sts4-cache/*

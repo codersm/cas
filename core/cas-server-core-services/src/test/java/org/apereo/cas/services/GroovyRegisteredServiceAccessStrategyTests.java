@@ -1,6 +1,7 @@
 package org.apereo.cas.services;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
 
@@ -24,23 +25,23 @@ public class GroovyRegisteredServiceAccessStrategyTests {
 
     @Test
     public void checkDefaultAuthzStrategyConfig() {
-        final GroovyRegisteredServiceAccessStrategy authz = new GroovyRegisteredServiceAccessStrategy();
+        val authz = new GroovyRegisteredServiceAccessStrategy();
         authz.setGroovyScript("classpath:accessstrategy.groovy");
 
         assertTrue(authz.isServiceAccessAllowed());
         assertTrue(authz.isServiceAccessAllowedForSso());
         assertTrue(authz.doPrincipalAttributesAllowServiceAccess("test", new HashMap<>()));
         assertNull(authz.getUnauthorizedRedirectUrl());
-        assertNull(authz.getDelegatedAuthenticationPolicy());
+        assertNotNull(authz.getDelegatedAuthenticationPolicy());
     }
 
     @Test
     public void verifySerializationToJson() throws IOException {
-        final GroovyRegisteredServiceAccessStrategy authz = new GroovyRegisteredServiceAccessStrategy();
+        val authz = new GroovyRegisteredServiceAccessStrategy();
         authz.setGroovyScript("classpath:accessstrategy.groovy");
         MAPPER.writeValue(JSON_FILE, authz);
 
-        final RegisteredServiceAccessStrategy strategyRead = MAPPER.readValue(JSON_FILE, GroovyRegisteredServiceAccessStrategy.class);
+        val strategyRead = MAPPER.readValue(JSON_FILE, GroovyRegisteredServiceAccessStrategy.class);
         assertEquals(authz, strategyRead);
     }
 }

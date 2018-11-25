@@ -1,8 +1,9 @@
 package org.apereo.cas.adaptors.radius;
 
+import lombok.experimental.UtilityClass;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.apache.commons.lang3.tuple.Pair;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.security.auth.login.FailedLoginException;
 import java.util.HashMap;
@@ -16,12 +17,9 @@ import java.util.Optional;
  * @author Misagh Moayyed
  * @since 5.0.0
  */
-public final class RadiusUtils {
-
-    private static final Logger LOGGER = LoggerFactory.getLogger(RadiusUtils.class);
-
-    private RadiusUtils() {
-    }
+@Slf4j
+@UtilityClass
+public class RadiusUtils {
 
     /**
      * Authenticate pair.
@@ -31,20 +29,23 @@ public final class RadiusUtils {
      * @param servers                         the servers
      * @param failoverOnAuthenticationFailure the failover on authentication failure
      * @param failoverOnException             the failover on exception
+     * @param state                           the state
      * @return the pair
      * @throws Exception the exception
      */
-    public static Pair<Boolean, Optional<Map<String, Object>>> authenticate(final String username, final String password,
+    public static Pair<Boolean, Optional<Map<String, Object>>> authenticate(final String username,
+                                                                            final String password,
                                                                             final List<RadiusServer> servers,
                                                                             final boolean failoverOnAuthenticationFailure,
-                                                                            final boolean failoverOnException) throws Exception {
-        for (final RadiusServer radiusServer : servers) {
+                                                                            final boolean failoverOnException,
+                                                                            final Optional state) throws Exception {
+        for (val radiusServer : servers) {
             LOGGER.debug("Attempting to authenticate [{}] at [{}]", username, radiusServer);
             try {
-                final RadiusResponse response = radiusServer.authenticate(username, password);
+                val response = radiusServer.authenticate(username, password, state);
                 if (response != null) {
-                    final Map<String, Object> attributes = new HashMap<>();
-                    response.getAttributes().forEach(attribute -> attributes.put(attribute.getAttributeName(), attribute.getValue().toString()));
+                    val attributes = new HashMap<String, Object>();
+                    response.getAttributes().forEach(attribute -> attributes.put(attribute.getAttributeName(), attribute.getValue()));
                     return Pair.of(Boolean.TRUE, Optional.of(attributes));
                 }
 
@@ -59,6 +60,6 @@ public final class RadiusUtils {
                 LOGGER.warn("failoverOnException enabled -- trying next server.", e);
             }
         }
-        return Pair.of(Boolean.TRUE, Optional.empty());
+        return Pair.of(Boolean.FALSE, Optional.empty());
     }
 }

@@ -4,21 +4,20 @@ import org.apereo.cas.authentication.principal.Principal;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.services.ServicesManager;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * This is {@link BaseSurrogateAuthenticationService}.
  *
  * @author Misagh Moayyed
  * @since 5.2.0
  */
+@RequiredArgsConstructor
 public abstract class BaseSurrogateAuthenticationService implements SurrogateAuthenticationService {
     /**
      * The Services manager.
      */
     protected final ServicesManager servicesManager;
-
-    public BaseSurrogateAuthenticationService(final ServicesManager servicesManager) {
-        this.servicesManager = servicesManager;
-    }
 
     @Override
     public final boolean canAuthenticateAs(final String surrogate, final Principal principal, final Service service) {

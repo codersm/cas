@@ -1,9 +1,12 @@
 package org.apereo.cas.util;
 
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.apereo.cas.authentication.DefaultCasSslContext;
 import org.apereo.cas.util.http.HttpClient;
 import org.apereo.cas.util.http.SimpleHttpClientFactoryBean;
+
+import lombok.SneakyThrows;
+import lombok.val;
+import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.core.io.ClassPathResource;
@@ -23,22 +26,22 @@ public class TrustedProxyAuthenticationTrustStoreSslSocketFactoryTests {
     private HttpClient client;
 
     @Before
-    public void prepareHttpClient() throws Exception {
-        final SimpleHttpClientFactoryBean clientFactory = new SimpleHttpClientFactoryBean();
-        clientFactory.setSslSocketFactory(new SSLConnectionSocketFactory(
-                new DefaultCasSslContext(TRUST_STORE, TRUST_STORE_PSW, KeyStore.getDefaultType()).getSslContext()));
+    @SneakyThrows
+    public void prepareHttpClient() {
+        val clientFactory = new SimpleHttpClientFactoryBean();
+        clientFactory.setSslSocketFactory(new SSLConnectionSocketFactory(new DefaultCasSslContext(TRUST_STORE, TRUST_STORE_PSW, KeyStore.getDefaultType()).getSslContext()));
         this.client = clientFactory.getObject();
     }
 
     @Test
     public void verifySuccessfulConnection() {
-        final boolean valid = client.isValidEndPoint("https://www.github.com");
+        val valid = client.isValidEndPoint("https://www.github.com");
         assertTrue(valid);
     }
 
     @Test
     public void verifySuccessfulConnectionWithCustomSSLCert() {
-        final boolean valid = client.isValidEndPoint("https://self-signed.badssl.com");
+        val valid = client.isValidEndPoint("https://self-signed.badssl.com");
         assertTrue(valid);
     }
 

@@ -2,23 +2,19 @@ package org.apereo.cas.web.flow;
 
 import org.apereo.cas.CasProtocolConstants;
 import org.apereo.cas.CentralAuthenticationService;
-import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.AuthenticationException;
-import org.apereo.cas.authentication.AuthenticationResult;
-import org.apereo.cas.authentication.AuthenticationResultBuilder;
 import org.apereo.cas.authentication.AuthenticationServiceSelectionPlan;
 import org.apereo.cas.authentication.AuthenticationSystemSupport;
-import org.apereo.cas.authentication.Credential;
-import org.apereo.cas.authentication.principal.Service;
-import org.apereo.cas.services.RegisteredService;
+import org.apereo.cas.authentication.PrincipalElectionStrategy;
 import org.apereo.cas.services.ServicesManager;
 import org.apereo.cas.ticket.AbstractTicketException;
 import org.apereo.cas.ticket.InvalidTicketException;
-import org.apereo.cas.ticket.ServiceTicket;
 import org.apereo.cas.ticket.registry.TicketRegistrySupport;
 import org.apereo.cas.web.support.WebUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import org.springframework.util.StringUtils;
 import org.springframework.webflow.action.AbstractAction;
 import org.springframework.webflow.action.EventFactorySupport;
@@ -33,25 +29,16 @@ import org.springframework.webflow.execution.RequestContext;
  * @author Scott Battaglia
  * @since 3.0.0
  */
+@Slf4j
+@RequiredArgsConstructor
 public class GenerateServiceTicketAction extends AbstractAction {
-    private static final Logger LOGGER = LoggerFactory.getLogger(GenerateServiceTicketAction.class);
-    private final CentralAuthenticationService centralAuthenticationService;
-    private final AuthenticationServiceSelectionPlan authenticationRequestServiceSelectionStrategies;
-    private final AuthenticationSystemSupport authenticationSystemSupport;
-    private final TicketRegistrySupport ticketRegistrySupport;
-    private final ServicesManager servicesManager;
 
-    public GenerateServiceTicketAction(final AuthenticationSystemSupport authenticationSystemSupport,
-                                       final CentralAuthenticationService authenticationService,
-                                       final TicketRegistrySupport ticketRegistrySupport,
-                                       final ServicesManager servicesManager,
-                                       final AuthenticationServiceSelectionPlan authenticationRequestServiceSelectionStrategies) {
-        this.authenticationSystemSupport = authenticationSystemSupport;
-        this.centralAuthenticationService = authenticationService;
-        this.ticketRegistrySupport = ticketRegistrySupport;
-        this.servicesManager = servicesManager;
-        this.authenticationRequestServiceSelectionStrategies = authenticationRequestServiceSelectionStrategies;
-    }
+    private final AuthenticationSystemSupport authenticationSystemSupport;
+    private final CentralAuthenticationService centralAuthenticationService;
+    private final TicketRegistrySupport ticketRegistrySupport;
+    private final AuthenticationServiceSelectionPlan authenticationRequestServiceSelectionStrategies;
+    private final ServicesManager servicesManager;
+    private final PrincipalElectionStrategy principalElectionStrategy;
 
     /**
      * {@inheritDoc}
@@ -66,43 +53,43 @@ public class GenerateServiceTicketAction extends AbstractAction {
      */
     @Override
     protected Event doExecute(final RequestContext context) {
-        final Service service = WebUtils.getService(context);
-        LOGGER.debug("Service asking for service ticket is [{}]", service);
+        val service = WebUtils.getService(context);
+        LOGGER.trace("Service asking for service ticket is [{}]", service);
 
-        final String ticketGrantingTicket = WebUtils.getTicketGrantingTicketId(context);
+        val ticketGrantingTicket = WebUtils.getTicketGrantingTicketId(context);
         LOGGER.debug("Ticket-granting ticket found in the context is [{}]", ticketGrantingTicket);
 
         try {
-            final Authentication authentication = this.ticketRegistrySupport.getAuthenticationFrom(ticketGrantingTicket);
+            val authentication = this.ticketRegistrySupport.getAuthenticationFrom(ticketGrantingTicket);
             if (authentication == null) {
-                throw new InvalidTicketException(new AuthenticationException("No authentication found for ticket "
-                        + ticketGrantingTicket), ticketGrantingTicket);
+                val authn = new AuthenticationException("No authentication found for ticket " + ticketGrantingTicket);
+                throw new InvalidTicketException(authn, ticketGrantingTicket);
             }
 
-            final Service selectedService = authenticationRequestServiceSelectionStrategies.resolveService(service);
-            final RegisteredService registeredService = servicesManager.findServiceBy(selectedService);
+            val selectedService = authenticationRequestServiceSelectionStrategies.resolveService(service);
+            val registeredService = servicesManager.findServiceBy(selectedService);
             LOGGER.debug("Registered service asking for service ticket is [{}]", registeredService);
             WebUtils.putRegisteredService(context, registeredService);
             WebUtils.putService(context, service);
 
             if (registeredService != null) {
-                if (!StringUtils.isEmpty(registeredService.getAccessStrategy().getUnauthorizedRedirectUrl())) {
-                    LOGGER.debug("Registered service may redirect to [{}] for unauthorized access requests",
-                            registeredService.getAccessStrategy().getUnauthorizedRedirectUrl());
+                val url = registeredService.getAccessStrategy().getUnauthorizedRedirectUrl();
+                if (url != null) {
+                    LOGGER.debug("Registered service may redirect to [{}] for unauthorized access requests", url);
                 }
-                WebUtils.putUnauthorizedRedirectUrlIntoFlowScope(context, registeredService.getAccessStrategy().getUnauthorizedRedirectUrl());
+                WebUtils.putUnauthorizedRedirectUrlIntoFlowScope(context, url);
             }
             if (WebUtils.getWarningCookie(context)) {
                 LOGGER.debug("Warning cookie is present in the request context. Routing result to [{}] state", CasWebflowConstants.STATE_ID_WARN);
                 return result(CasWebflowConstants.STATE_ID_WARN);
             }
 
-            final Credential credential = WebUtils.getCredential(context);
-            final AuthenticationResultBuilder builder = this.authenticationSystemSupport.establishAuthenticationContextFromInitial(authentication, credential);
-            final AuthenticationResult authenticationResult = builder.build(service);
+            val credential = WebUtils.getCredential(context);
+            val builder = this.authenticationSystemSupport.establishAuthenticationContextFromInitial(authentication, credential);
+            val authenticationResult = builder.build(principalElectionStrategy, service);
 
-            LOGGER.debug("Built the final authentication result [{}] to grant service ticket to [{}]", authenticationResult, service);
-            final ServiceTicket serviceTicketId = this.centralAuthenticationService.grantServiceTicket(ticketGrantingTicket, service, authenticationResult);
+            LOGGER.trace("Built the final authentication result [{}] to grant service ticket to [{}]", authenticationResult, service);
+            val serviceTicketId = this.centralAuthenticationService.grantServiceTicket(ticketGrantingTicket, service, authenticationResult);
             WebUtils.putServiceTicketInRequestScope(context, serviceTicketId);
             LOGGER.debug("Granted service ticket [{}] and added it to the request scope", serviceTicketId);
             return success();
@@ -127,10 +114,9 @@ public class GenerateServiceTicketAction extends AbstractAction {
      * @param context the context
      * @return true, if gateway present
      */
-
     protected boolean isGatewayPresent(final RequestContext context) {
-        return StringUtils.hasText(context.getExternalContext()
-                .getRequestParameterMap().get(CasProtocolConstants.PARAMETER_GATEWAY));
+        val requestParameterMap = context.getExternalContext().getRequestParameterMap();
+        return StringUtils.hasText(requestParameterMap.get(CasProtocolConstants.PARAMETER_GATEWAY));
     }
 
     /**

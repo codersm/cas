@@ -3,7 +3,9 @@ package org.apereo.cas.adaptors.jdbc;
 import org.apereo.cas.authentication.handler.support.AbstractUsernamePasswordAuthenticationHandler;
 import org.apereo.cas.authentication.principal.PrincipalFactory;
 import org.apereo.cas.services.ServicesManager;
+
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 
 import javax.sql.DataSource;
 
@@ -16,6 +18,7 @@ import javax.sql.DataSource;
 public abstract class AbstractJdbcUsernamePasswordAuthenticationHandler extends AbstractUsernamePasswordAuthenticationHandler {
 
     private final JdbcTemplate jdbcTemplate;
+    private final NamedParameterJdbcTemplate namedParameterJdbcTemplate;
     private final DataSource dataSource;
 
     public AbstractJdbcUsernamePasswordAuthenticationHandler(final String name, final ServicesManager servicesManager, final PrincipalFactory principalFactory,
@@ -23,6 +26,7 @@ public abstract class AbstractJdbcUsernamePasswordAuthenticationHandler extends 
         super(name, servicesManager, principalFactory, order);
         this.dataSource = dataSource;
         this.jdbcTemplate = new JdbcTemplate(dataSource);
+        this.namedParameterJdbcTemplate = new NamedParameterJdbcTemplate(this.jdbcTemplate);
     }
 
     /**
@@ -32,6 +36,10 @@ public abstract class AbstractJdbcUsernamePasswordAuthenticationHandler extends 
      */
     protected JdbcTemplate getJdbcTemplate() {
         return this.jdbcTemplate;
+    }
+
+    protected NamedParameterJdbcTemplate getNamedJdbcTemplate() {
+        return this.namedParameterJdbcTemplate;
     }
 
     protected DataSource getDataSource() {

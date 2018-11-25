@@ -1,14 +1,16 @@
 package org.apereo.cas.support.oauth.web.response.accesstoken.ext;
 
-import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apereo.cas.authentication.Authentication;
 import org.apereo.cas.authentication.principal.Service;
 import org.apereo.cas.support.oauth.OAuth20GrantTypes;
+import org.apereo.cas.support.oauth.OAuth20ResponseTypes;
 import org.apereo.cas.support.oauth.services.OAuthRegisteredService;
 import org.apereo.cas.ticket.OAuthToken;
 import org.apereo.cas.ticket.TicketGrantingTicket;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+
+import lombok.Builder;
+import lombok.Getter;
+import lombok.ToString;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
@@ -19,107 +21,38 @@ import java.util.Set;
  * @author Misagh Moayyed
  * @since 5.1.0
  */
+@ToString
+@Getter
+@Builder
 public class AccessTokenRequestDataHolder {
-    private static final Logger LOGGER = LoggerFactory.getLogger(AccessTokenRequestDataHolder.class);
 
-    private final Service service;
-    private final Authentication authentication;
-    private final OAuthToken token;
-    private final boolean generateRefreshToken;
-    private final OAuthRegisteredService registeredService;
-    private final TicketGrantingTicket ticketGrantingTicket;
-    private final OAuth20GrantTypes grantType;
-    private final Set<String> scopes;
+    private Service service;
 
-    public AccessTokenRequestDataHolder(final OAuthToken token,
-                                        final OAuthRegisteredService registeredService,
-                                        final OAuth20GrantTypes grantType,
-                                        final boolean isAllowedToGenerateRefreshToken,
-                                        final Set<String> scopes) {
-        this(token.getService(), token.getAuthentication(), token, registeredService,
-                grantType, isAllowedToGenerateRefreshToken, scopes);
-    }
+    private Authentication authentication;
 
-    public AccessTokenRequestDataHolder(final Service service,
-                                        final Authentication authentication,
-                                        final OAuthToken token,
-                                        final OAuthRegisteredService registeredService,
-                                        final OAuth20GrantTypes grantType,
-                                        final boolean isAllowedToGenerateRefreshToken,
-                                        final Set<String> scopes) {
-        this(service, authentication, registeredService, token, null,
-                grantType, isAllowedToGenerateRefreshToken, scopes);
-    }
+    private OAuthToken token;
 
-    public AccessTokenRequestDataHolder(final Service service, final Authentication authentication,
-                                        final OAuthRegisteredService registeredService,
-                                        final TicketGrantingTicket ticketGrantingTicket,
-                                        final OAuth20GrantTypes grantType,
-                                        final Set<String> scopes) {
-        this(service, authentication, registeredService, null,
-                ticketGrantingTicket, grantType, true, scopes);
-    }
+    private boolean generateRefreshToken;
 
-    private AccessTokenRequestDataHolder(final Service service, final Authentication authentication,
-                                         final OAuthRegisteredService registeredService,
-                                         final OAuthToken token,
-                                         final TicketGrantingTicket ticketGrantingTicket,
-                                         final OAuth20GrantTypes grantType,
-                                         final boolean isAllowedToGenerateRefreshToken,
-                                         final Set<String> scopes) {
-        this.service = service;
-        this.authentication = authentication;
-        this.registeredService = registeredService;
-        this.ticketGrantingTicket = token != null ? token.getGrantingTicket() : ticketGrantingTicket;
-        this.token = token;
-        this.generateRefreshToken = isAllowedToGenerateRefreshToken ? (registeredService != null && registeredService.isGenerateRefreshToken()) : false;
-        this.grantType = grantType;
-        this.scopes = new LinkedHashSet<>(scopes);
-    }
+    private OAuthRegisteredService registeredService;
 
-    public OAuth20GrantTypes getGrantType() {
-        return grantType;
-    }
+    private TicketGrantingTicket ticketGrantingTicket;
 
-    public Service getService() {
-        return service;
-    }
+    @Builder.Default
+    private OAuth20GrantTypes grantType = OAuth20GrantTypes.NONE;
 
-    public Authentication getAuthentication() {
-        return authentication;
-    }
+    @Builder.Default
+    private Set<String> scopes = new LinkedHashSet<>();
 
-    public OAuthToken getToken() {
-        return token;
-    }
+    @Builder.Default
+    private OAuth20ResponseTypes responseType = OAuth20ResponseTypes.NONE;
 
-    public boolean isGenerateRefreshToken() {
-        return generateRefreshToken;
-    }
+    private String deviceCode;
 
-    public OAuthRegisteredService getRegisteredService() {
-        return registeredService;
-    }
+    private String codeChallenge;
 
-    public TicketGrantingTicket getTicketGrantingTicket() {
-        return this.ticketGrantingTicket;
-    }
+    @Builder.Default
+    private String codeChallengeMethod = "plain";
 
-    public Set<String> getScopes() {
-        return scopes;
-    }
-
-    @Override
-    public String toString() {
-        return new ToStringBuilder(this)
-                .append("service", service)
-                .append("authentication", authentication)
-                .append("token", token)
-                .append("generateRefreshToken", generateRefreshToken)
-                .append("registeredService", registeredService)
-                .append("ticketGrantingTicket", ticketGrantingTicket)
-                .append("grantType", grantType)
-                .append("scopes", scopes)
-                .toString();
-    }
+    private String codeVerifier;
 }

@@ -1,5 +1,7 @@
 package org.apereo.cas.authentication.exceptions;
 
+import lombok.NoArgsConstructor;
+
 import javax.security.auth.login.AccountException;
 
 /**
@@ -8,16 +10,13 @@ import javax.security.auth.login.AccountException;
  * @author Marvin S. Addison
  * @since 4.0.0
  */
+@NoArgsConstructor
 public class AccountDisabledException extends AccountException {
 
-    /** Serialization metadata. */
-    private static final long serialVersionUID = 7487835035108753209L;
-
     /**
-     * Instantiates a new account disabled exception.
+     * Serialization metadata.
      */
-    public AccountDisabledException() {
-    }
+    private static final long serialVersionUID = 7487835035108753209L;
 
     /**
      * Instantiates a new account disabled exception.

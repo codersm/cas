@@ -1,5 +1,6 @@
 package org.apereo.cas.util;
 
+import lombok.val;
 import org.junit.Test;
 
 import static org.junit.Assert.*;
@@ -14,15 +15,13 @@ public class RegexUtilsTests {
 
     @Test
     public void verifyNotValidRegex() {
-        final String notValidRegex = "***";
+        val notValidRegex = "***";
 
         assertFalse(RegexUtils.isValidRegex(notValidRegex));
     }
 
     @Test
     public void verifyNullRegex() {
-        final String nullRegex = null;
-
-        assertFalse(RegexUtils.isValidRegex(nullRegex));
+        assertFalse(RegexUtils.isValidRegex(null));
     }
 }

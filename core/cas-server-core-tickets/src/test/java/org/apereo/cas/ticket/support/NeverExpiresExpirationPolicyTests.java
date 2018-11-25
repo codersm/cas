@@ -1,8 +1,8 @@
 package org.apereo.cas.ticket.support;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.val;
 import org.apache.commons.io.FileUtils;
-import org.apereo.cas.ticket.ExpirationPolicy;
 import org.junit.Test;
 
 import java.io.File;
@@ -21,11 +21,11 @@ public class NeverExpiresExpirationPolicyTests {
 
     @Test
     public void verifySerializeANeverExpiresExpirationPolicyToJson() throws IOException {
-        final NeverExpiresExpirationPolicy policyWritten = new NeverExpiresExpirationPolicy();
+        val policyWritten = new NeverExpiresExpirationPolicy();
 
         MAPPER.writeValue(JSON_FILE, policyWritten);
 
-        final ExpirationPolicy policyRead = MAPPER.readValue(JSON_FILE, NeverExpiresExpirationPolicy.class);
+        val policyRead = MAPPER.readValue(JSON_FILE, NeverExpiresExpirationPolicy.class);
 
         assertEquals(policyWritten, policyRead);
     }

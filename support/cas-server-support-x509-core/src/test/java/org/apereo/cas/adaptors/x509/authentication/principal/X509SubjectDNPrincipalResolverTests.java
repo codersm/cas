@@ -1,11 +1,14 @@
 package org.apereo.cas.adaptors.x509.authentication.principal;
 
 import org.apereo.cas.authentication.CoreAuthenticationTestUtils;
-import org.apereo.cas.authentication.UsernamePasswordCredential;
+import org.apereo.cas.authentication.credential.UsernamePasswordCredential;
 import org.apereo.cas.authentication.handler.support.SimpleTestUsernamePasswordAuthenticationHandler;
+
+import lombok.val;
 import org.junit.Test;
 
 import java.security.cert.X509Certificate;
+import java.util.Optional;
 
 import static org.junit.Assert.*;
 
@@ -21,16 +24,16 @@ public class X509SubjectDNPrincipalResolverTests extends AbstractX509Certificate
 
     @Test
     public void verifyResolvePrincipalInternal() {
-        final X509CertificateCredential c = new X509CertificateCredential(new X509Certificate[]{VALID_CERTIFICATE});
+        val c = new X509CertificateCredential(new X509Certificate[]{VALID_CERTIFICATE});
         c.setCertificate(VALID_CERTIFICATE);
         assertEquals(VALID_CERTIFICATE.getSubjectDN().getName(), this.resolver.resolve(c,
-            CoreAuthenticationTestUtils.getPrincipal(),
-            new SimpleTestUsernamePasswordAuthenticationHandler()).getId());
+            Optional.of(CoreAuthenticationTestUtils.getPrincipal()),
+            Optional.of(new SimpleTestUsernamePasswordAuthenticationHandler())).getId());
     }
 
     @Test
     public void verifySupport() {
-        final X509CertificateCredential c = new X509CertificateCredential(new X509Certificate[]{VALID_CERTIFICATE});
+        val c = new X509CertificateCredential(new X509Certificate[]{VALID_CERTIFICATE});
         assertTrue(this.resolver.supports(c));
     }
 
